@@ -1,42 +1,38 @@
-<!doctype html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#11111b">
-<meta name="description" content="REALFACE AI — prototype mobile de visioconférence et avatar.">
-<link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" href="./icons/icon-192.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./style.css">
-<title>REALFACE AI</title>
-</head>
-<body>
-<header><div class="brand"><span class="logo">R</span><span>REALFACE <b>AI</b></span></div><span class="tag">BÊTA</span></header>
-<main>
-<section class="hero"><div class="eyebrow">VOTRE VISAGE, VOTRE PRÉSENCE</div><h1>La visioconférence,<br>à votre image.</h1><p>Prototype mobile pour préparer votre caméra et votre avatar.</p></section>
-<section class="panel preview-panel">
-<div class="panel-head"><strong>Aperçu caméra</strong><span id="cameraStatus" class="status">Caméra inactive</span></div>
-<div class="preview">
-<video id="cameraVideo" autoplay muted playsinline></video>
-<div id="placeholder" class="placeholder"><div class="avatar-symbol">◉</div><strong>Bienvenue sur REALFACE AI</strong><span>Activez la caméra pour commencer.</span></div>
-<div class="video-label">Aperçu local</div>
-</div>
-<div class="controls"><button id="startCamera" class="primary">Activer la caméra</button><button id="stopCamera" disabled>Arrêter</button></div>
-</section>
-<section class="panel">
-<h2>Créer un aperçu d’avatar</h2><p class="help">Choisissez une photo que vous avez le droit d’utiliser. Elle reste dans ce navigateur et n’est pas envoyée à un serveur.</p>
-<label class="upload" for="photoInput"><span class="plus">＋</span><span><b>Choisir une photo</b><small>JPG, PNG ou WebP · 8 Mo maximum</small></span></label>
-<input id="photoInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
-<div id="photoArea" class="photo-area" hidden><img id="photoPreview" alt="Aperçu de la photo choisie"><button id="removePhoto" class="secondary">Retirer la photo</button></div>
-<label class="consent"><input id="photoConsent" type="checkbox"><span>Je confirme avoir le droit d’utiliser cette photo et le consentement de la personne représentée.</span></label>
-</section>
-<section class="panel">
-<h2>Appel à deux personnes</h2><p class="help">L’interface est prête, mais les appels distants ne sont pas encore connectés.</p>
-<label for="roomCode">Code de réunion</label><input id="roomCode" class="text-input" maxlength="32" placeholder="Ex. REAL-123">
-<button id="joinCall" class="primary full">Préparer l’appel</button><p id="callMessage" class="call-message" role="status">Aucun appel en cours.</p>
-</section>
-<section class="note"><b>Transparence :</b> ce prototype ne transforme pas encore le visage avec l’IA et ne connecte pas deux utilisateurs. Il ne clone ni ne modifie la voix.</section>
-<footer>REALFACE AI · Prototype non commercial de démonstration</footer>
-</main>
-<script src="./app.js"></script>
-</body></html>
+RREALFACE AI BÊTA
+VOTRE CAMÉRA · VOTRE STYLE
+Changez de style.
+Restez vous-même.
+Testez des effets visuels pendant votre aperçu caméra et préparez votre expérience d’appel.
+
+APERÇU EN DIRECT
+Votre caméra
+Caméra inactive
+◉
+Prêt à commencer ? Activez la caméra ou importez une photo.
+Aperçu local
+↻
+Activer la caméra Arrêter
+L’image de la caméra est traitée visuellement dans cette page. Aucun appel distant n’est encore connecté.
+
+CHOISISSEZ UN LOOK
+Styles d’avatar
+4 styles
+◉RéalisteNaturel et doux ✦AnimeCouleurs intenses ◇Avatar 3DEffet stylisé ✳PersonnaliséRéglez l’effet
+Style réaliste sélectionné. Effet visuel léger.
+
+OPTION PHOTO
+Préparer un avatar photo
+Importez une photo JPG, PNG ou WebP de 8 Mo maximum. Elle est affichée localement dans votre navigateur.
+
+＋Choisir une photoAppuyez pour sélectionner une image Je confirme avoir le droit d’utiliser cette photo et, si elle représente une autre personne, son consentement.
+PROCHAINE ÉTAPE
+Préparer une salle d’appel
+Cette version vérifie le code de salle, mais ne connecte pas encore deux personnes entre elles.
+
+Code de salle 
+Ex. REAL-123
+ Préparer l’appel
+Aucun appel en cours.
+
+À savoir : les styles actuels sont des filtres visuels CSS, pas une transformation IA du visage. La transformation réelle du visage et les appels vidéo entre utilisateurs nécessitent encore un modèle IA et un service de connexion WebRTC.
+REALFACE AI · Prototype de démonstration ·
