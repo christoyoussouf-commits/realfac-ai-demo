@@ -3,106 +3,110 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>REALFACE AI - Votre Caméra, Votre Style</title>
+<title>REALFACE AI PHASE 3 - Avatar IA Génératif</title>
 <link rel="stylesheet" href="style.css">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0a0a0f">
 </head>
 <body>
 <header class="topbar">
-  <div class="logo">REALFACE <span>AI</span> <b class="beta">BÊTA</b></div>
-  <div class="tagline">VOTRE CAMÉRA • VOTRE STYLE</div>
+  <div class="logo">REALFACE <span>AI</span> <b class="beta">PHASE 3</b></div>
+  <div class="tagline">VOTRE CAMÉRA • AVATAR IA GÉNÉRATIF</div>
 </header>
-
 <main class="container">
   <section class="hero">
-    <h1>Changez de style.<br>Restez vous-même.</h1>
-    <p>Testez des effets visuels pendant votre aperçu caméra et préparez votre expérience d'appel.</p>
+    <h1>Devenez un avatar.<br>Généré par IA.</h1>
+    <p>Phase 3 : Transformation réelle du visage par IA générative. Capturez, choisissez un style, générez.</p>
   </section>
 
   <section class="card camera-card">
     <div class="card-head">
-      <h2>APERÇU EN DIRECT</h2>
-      <span id="camStatus" class="status inactive">Caméra inactive • Prêt à commencer ?</span>
+      <h2>APERÇU EN DIRECT - PHASE 2</h2>
+      <span id="camStatus" class="status inactive">Caméra inactive</span>
     </div>
-    
     <div class="video-wrap" id="videoWrap">
       <video id="video" autoplay playsinline muted></video>
       <canvas id="canvas"></canvas>
       <div id="placeholder" class="placeholder">
         <div class="ph-icon">📷</div>
-        <p>Activez la caméra ou importez une photo</p>
-        <small>Aperçu local • Aucun appel distant n'est encore connecté</small>
+        <p>Activez la caméra pour la pré-transformation</p>
       </div>
     </div>
-
     <div class="actions">
       <button id="btnFront" class="btn primary">Activer caméra</button>
-      <button id="btnBack" class="btn ghost">Caméra arrière</button>
+      <button id="btnBack" class="btn ghost">Arrière</button>
       <button id="btnStop" class="btn ghost" style="display:none">Arrêter</button>
+      <button id="btnCapture" class="btn primary" style="background:linear-gradient(135deg,#ff5cc8,#7c5cff)">📸 Capturer</button>
     </div>
-    <p class="hint">L'image de la caméra est traitée visuellement dans cette page. Aucun appel distant n'est encore connecté.</p>
   </section>
 
   <section class="card">
     <div class="card-head">
-      <h2>CHOISISSEZ UN LOOK</h2>
-      <span class="count"><span id="styleCount">4</span> styles • <span id="currentStyleName">Effet visuel léger</span></span>
+      <h2>CHOISISSEZ UN LOOK IA</h2>
+      <span class="count" id="currentStyleName">Réaliste • Lissage naturel</span>
     </div>
     <div class="looks" id="looks">
-      <button class="look active" data-style="realistic">
-        <span class="look-emoji">✨</span>
-        <strong>Style réaliste</strong>
-        <small>Réaliste - Effet visuel léger</small>
+      <button class="look active" data-style="realistic" data-prompt="beautiful person, realistic, 8k, soft lighting, detailed skin">
+        <span class="look-emoji">✨</span><strong>Style réaliste</strong><small>Amélioration IA</small>
       </button>
-      <button class="look" data-style="natural">
-        <span class="look-emoji">🍃</span>
-        <strong>Naturel et doux</strong>
-        <small>Adoucit et éclaire</small>
+      <button class="look" data-style="natural" data-prompt="natural soft light portrait, warm, gentle, instagram style">
+        <span class="look-emoji">🍃</span><strong>Naturel et doux</strong><small>Portrait doux</small>
       </button>
-      <button class="look" data-style="anime">
-        <span class="look-emoji">🎨</span>
-        <strong>Anime</strong>
-        <small>Couleurs intenses</small>
+      <button class="look" data-style="anime" data-prompt="anime style, studio ghibli, makoto shinkai, vibrant colors, detailed anime face, same person as anime character">
+        <span class="look-emoji">🎨</span><strong>Anime IA</strong><small>Ghibli / Shinkai</small>
       </button>
-      <button class="look" data-style="avatar3d">
-        <span class="look-emoji">🤖</span>
-        <strong>Avatar 3D</strong>
-        <small>Effet stylisé • Personnalisé</small>
+      <button class="look" data-style="avatar3d" data-prompt="pixar style 3d avatar, disney pixar character, 3d render, cute, highly detailed, same face as pixar character, toy story style">
+        <span class="look-emoji">🤖</span><strong>Avatar 3D Pixar</strong><small>Disney / Pixar</small>
       </button>
     </div>
   </section>
 
-  <section class="card">
-    <h2>OPTION PHOTO</h2>
-    <p class="hint">Importer une photo JPG, PNG ou WebP de 8 Mo max. Elle est affichée localement dans votre navigateur.</p>
-    <label class="upload">
-      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
-      <span>Choisir une photo</span>
-      <small>Appuyez pour sélectionner une image</small>
-    </label>
-    <label class="check"><input type="checkbox" id="consent"> Je confirme avoir le droit d'utiliser cette photo et, si elle représente une autre personne, son consentement.</label>
-    <div id="photoPreview" class="photo-preview" style="display:none">
-      <img id="photoImg" alt="">
+  <section class="card ai-card">
+    <h2>🤖 GÉNÉRATION AVATAR IA - PHASE 3</h2>
+    <p class="hint">Capturez une image, puis générez votre avatar avec une vraie IA. Utilise Hugging Face gratuit (ou Replicate/Fal).</p>
+    
+    <div id="capturedArea" style="display:none">
+      <div class="photo-preview"><img id="capturedImg"></div>
+      <div class="actions">
+        <button id="btnGenerate" class="btn primary" style="flex:2;background:linear-gradient(135deg,#4ef2ff,#7c5cff)">✨ Générer mon Avatar IA</button>
+        <button id="btnRetake" class="btn ghost">Reprendre</button>
+      </div>
+    </div>
+
+    <div id="aiResult" class="ai-result" style="display:none">
+      <h3>Votre Avatar IA</h3>
+      <div class="photo-preview"><img id="aiImg"></div>
+      <div class="actions">
+        <button id="btnDownload" class="btn primary">⬇️ Télécharger</button>
+        <button id="btnUseAsProfile" class="btn ghost">Utiliser pour appel</button>
+      </div>
+    </div>
+
+    <div id="aiLoading" style="display:none;text-align:center;padding:20px">
+      <div class="loader"></div>
+      <p style="margin-top:12px;font-weight:700">Génération IA en cours... 10-20s</p>
+      <small class="hint">Le modèle transforme votre visage en <span id="loadingStyle">Avatar 3D</span></small>
+    </div>
+
+    <div class="notice" style="margin-top:16px">
+      <strong>🔑 Clé API gratuite requise pour la Phase 3 :</strong><br>
+      1. Va sur huggingface.co > Settings > Access Tokens > New Token (gratuit)<br>
+      2. Colle-le ci-dessous. Il reste sur ton téléphone, jamais envoyé ailleurs que vers Hugging Face.<br>
+      <div class="room" style="margin-top:10px">
+        <input id="hfToken" type="password" placeholder="hf_xxxxxxxx..." style="text-transform:none;letter-spacing:0">
+        <button id="btnSaveToken" class="btn ghost">Sauver</button>
+      </div>
+      <small class="hint">Sans clé, la démo utilisera une transformation avancée locale (Phase 2.5) + instructions pour activer l'IA.</small>
     </div>
   </section>
 
   <section class="card">
-    <h2>PROCHAINE ÉTAPE</h2>
-    <p class="hint">Préparer une salle d'appel. Cette version vérifie le code de salle, mais ne connecte pas encore deux personnes entre elles.</p>
-    <div class="room">
-      <input id="roomCode" placeholder="Ex. REAL-123" maxlength="12">
-      <button id="btnRoom" class="btn primary">Préparer l'appel</button>
-    </div>
-    <p id="roomStatus" class="hint">Aucun appel en cours.</p>
-    <div class="notice">
-      <strong>A savoir :</strong> les styles actuels sont des filtres visuels CSS, pas une transformation IA du visage. La transformation réelle du visage et les appels vidéo entre utilisateurs nécessitent encore un modèle IA et un service de connexion WebRTC.
-    </div>
+    <h2>PROCHAINE ÉTAPE - SALLE D'APPEL</h2>
+    <div class="room"><input id="roomCode" placeholder="Ex. REAL-123"><button id="btnRoom" class="btn primary">Préparer l'appel</button></div>
+    <p id="roomStatus" class="hint">Prêt pour appel avec avatar IA.</p>
   </section>
 </main>
-
-<footer>REALFACE AI • Prototype de démonstration</footer>
-
+<footer>REALFACE AI • PHASE 3 - Prototype IA Génératif</footer>
 <script src="app.js"></script>
 </body>
 </html>
