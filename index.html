@@ -2,67 +2,21 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>REALFACE - Noir vers Mark comme TikTok</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REALFACE Real IA - Vrai ChapCam</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="tiktok-layout">
-  <!-- Header like TikTok -->
-  <div class="header">
-    <div class="logo">REALFACE <span>MARK</span> <small>NOIR→MARK</small></div>
-    <div class="status" id="status">Comme ta vidéo TikTok</div>
-  </div>
-
-  <!-- Main stage like your video: small top-left real, big main Mark -->
-  <div class="stage" id="stage">
-    <div class="result-container" id="resultContainer">
-      <canvas id="resultCanvas"></canvas>
-      <video id="targetVideo" loop muted playsinline style="display:none"></video>
-      
-      <!-- Small real camera top-left like your video -->
-      <div class="pip" id="pip">
-        <video id="video" autoplay playsinline muted></video>
-        <canvas id="pipCanvas"></canvas>
-        <div class="pip-label">@multivoix.ci - TOI</div>
-        <div id="phPip" class="ph-pip"><div>📷</div><p>TOI</p></div>
-      </div>
-
-      <!-- Placeholder for result -->
-      <div id="phResult" class="ph-result">
-        <div>⚡</div>
-        <h3>Choisis Mark et lance</h3>
-        <p>Comme ta vidéo : noir en petit, Mark en grand qui fait tes gestes</p>
-        <small>Le même décor que ta vidéo avec led rouge au plafond</small>
-      </div>
-
-      <div class="watermark"><span>chapcam.com</span><div class="inf">∞</div></div>
-      <div class="ai-badge" id="aiBadge">AI • Mark</div>
-    </div>
-
-    <!-- Controls bottom -->
-    <div class="controls">
-      <label class="up-mark"><input type="file" id="targetFile" accept="image/*,video/*"><span>📸 Choisir Mark (photo/vidéo)</span></label>
-      <button id="btnStart" class="btn-start">▶️ TRANSFORMER NOIR → MARK - Comme TikTok</button>
-      <button id="btnStop" class="btn-stop" style="display:none">⏹️ Arrêter</button>
-      <div class="sliders">
-        <label>Zoom visage <input type="range" id="zoom" min="0.5" max="2.5" value="1.3" step="0.1"></label>
-        <label>Taille mains <input type="range" id="handSize" min="0.5" max="2" value="1" step="0.1"></label>
-      </div>
-      <div class="how">
-        <b>Comment ça marche comme ta vidéo :</b>
-        <p>1. Petit écran haut-gauche = TOI (noir) en direct</p>
-        <p>2. Grand écran = MARK qui fait EXACTEMENT tes gestes (mains levées, tête, bouche)</p>
-        <p>3. Même chemise blanche, même décor que ta vidéo TikTok</p>
-      </div>
-    </div>
-  </div>
+<div class="app">
+  <header><div class="logo">REALFACE <span>Real IA</span> <small>Comme ChapCam.com</small></div><div class="badge">VRAI inswapper_128</div></header>
+  <div class="warning">⚠️ VRAIE IA ChapCam: Utilise vrai modele inswapper_128 + GFPGAN comme ChapCam.com et Deep-Live-Cam. Transforme vraiment noir vers Mark, pas collage.</div>
+  <main>
+    <div class="card"><h2>Avatar cible</h2><label class="up"><input type="file" id="targetFile" accept="image/*"><span>Choisir Mark</span></label><div id="targetPreview" class="prev" style="display:none"><img id="targetImg"><p id="targetInfo">Analyse...</p></div></div>
+    <div class="card"><h2>Modeles IA</h2><button id="btnLoadModels" class="btn">Charger modeles Real IA</button><div id="modelProgress" style="display:none"><div class="bar"><div id="barFill" style="width:0%"></div></div><span id="progressText">0%</span></div></div>
+    <div class="dual"><div class="cam"><h3>Camera reelle</h3><div class="box"><video id="video" autoplay playsinline muted></video><div id="phReal" class="ph">Eteinte</div></div></div><div class="cam highlight"><h3>Camera ChapCam Real IA</h3><div class="box"><canvas id="resultCanvas"></canvas><div id="phResult" class="ph">En attente</div></div></div></div>
+    <div class="actions"><button id="btnStart" class="big">TRANSFORMER VRAIMENT - Real IA</button><button id="btnStop" class="big ghost" style="display:none">Stop</button></div>
+  </main>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 <script src="app.js"></script>
 </body>
 </html>
