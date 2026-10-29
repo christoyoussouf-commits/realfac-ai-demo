@@ -3,99 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ChapCam 5.0 - Live Swap - Je mange un garba</title>
+<title>REALFACE - Noir vers Mark comme TikTok</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="layout">
-  <!-- Sidebar like your laptop screenshot -->
-  <aside class="sidebar">
-    <div class="logo">Chap<span>Cam</span><div class="v5">5.0</div></div>
-    <div class="menu">
-      <div class="m active">🎥 Live Swap</div>
-      <div class="m">🖼️ Photo Swap</div>
-      <div class="m">🎬 Vidéo Swap</div>
-      <div class="m">👥 Mes avatars</div>
+<div class="tiktok-layout">
+  <!-- Header like TikTok -->
+  <div class="header">
+    <div class="logo">REALFACE <span>MARK</span> <small>NOIR→MARK</small></div>
+    <div class="status" id="status">Comme ta vidéo TikTok</div>
+  </div>
+
+  <!-- Main stage like your video: small top-left real, big main Mark -->
+  <div class="stage" id="stage">
+    <div class="result-container" id="resultContainer">
+      <canvas id="resultCanvas"></canvas>
+      <video id="targetVideo" loop muted playsinline style="display:none"></video>
+      
+      <!-- Small real camera top-left like your video -->
+      <div class="pip" id="pip">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="pipCanvas"></canvas>
+        <div class="pip-label">@multivoix.ci - TOI</div>
+        <div id="phPip" class="ph-pip"><div>📷</div><p>TOI</p></div>
+      </div>
+
+      <!-- Placeholder for result -->
+      <div id="phResult" class="ph-result">
+        <div>⚡</div>
+        <h3>Choisis Mark et lance</h3>
+        <p>Comme ta vidéo : noir en petit, Mark en grand qui fait tes gestes</p>
+        <small>Le même décor que ta vidéo avec led rouge au plafond</small>
+      </div>
+
+      <div class="watermark"><span>chapcam.com</span><div class="inf">∞</div></div>
+      <div class="ai-badge" id="aiBadge">AI • Mark</div>
     </div>
-    <div class="stats">
-      <div class="s"><span>Jetons</span><b>7800 +</b></div>
-      <div class="s"><span>Points restants</span><b>9050 / 8400</b><div class="bar"><div style="width:85%"></div></div></div>
-      <div class="s vip"><span>VIP DÉBOUT</span><b>ACTIF</b></div>
-    </div>
-    <div class="user">youssouf@gmail.com<br><button class="out">↩ Déconnexion</button></div>
-  </aside>
 
-  <main class="main">
-    <div class="top">
-      <div>
-        <h1>✨ Live Swap <span class="new">Nouveauté : ChapCam 5.0</span></h1>
-        <p>Transformez votre apparence en temps réel avec l'IA - Comme ta capture</p>
+    <!-- Controls bottom -->
+    <div class="controls">
+      <label class="up-mark"><input type="file" id="targetFile" accept="image/*,video/*"><span>📸 Choisir Mark (photo/vidéo)</span></label>
+      <button id="btnStart" class="btn-start">▶️ TRANSFORMER NOIR → MARK - Comme TikTok</button>
+      <button id="btnStop" class="btn-stop" style="display:none">⏹️ Arrêter</button>
+      <div class="sliders">
+        <label>Zoom visage <input type="range" id="zoom" min="0.5" max="2.5" value="1.3" step="0.1"></label>
+        <label>Taille mains <input type="range" id="handSize" min="0.5" max="2" value="1" step="0.1"></label>
       </div>
-      <div class="actions-top">
-        <button class="ot">Mes demandes</button>
-        <button class="org">Recharger</button>
-        <span class="pts">4992 pts</span>
-      </div>
-    </div>
-
-    <div class="workspace">
-      <!-- Step 1 -->
-      <div class="step"><span>1</span> Choisis qui tu veux devenir - comme "Je mange un garba avec mon avatar"</div>
-      <div class="card">
-        <div class="row">
-          <label class="up"><input type="file" id="targetFile" accept="image/*,video/*"><span>📁 Choisir avatar (photo ou vidéo garba)</span></label>
-          <div id="avatarPreview" class="aprev" style="display:none"><img id="targetImg"><video id="targetVideo" autoplay loop muted playsinline style="display:none"></video><div class="ok">✅ Avatar chargé</div></div>
-        </div>
-        <div id="avatarSelected" class="sel" style="display:none">
-          <img id="selImg" src=""><div><b>Avatar sélectionné</b><small id="avName">Mon avatar garba</small><small style="color:#00e676">Prêt pour Live Swap</small></div>
-        </div>
-      </div>
-
-      <div class="step"><span>2</span> Deux caméras côte à côte comme sur ton ordi</div>
-      <!-- Two cameras exactly like your laptop screenshot -->
-      <div class="dual">
-        <div class="cam">
-          <div class="ch">📷 Caméra réelle <span class="live">🔴 Caméra active</span></div>
-          <div class="box" id="realBox">
-            <video id="video" autoplay playsinline muted></video>
-            <div id="phReal" class="ph"><div>📷</div><b>TOI</b><p>Caméra inactive</p><small>Tu tiens ton téléphone comme sur ta capture</small><button class="mini" id="btnReal">Activer</button></div>
-            <div class="label">Caméra active - Toi avec ton téléphone</div>
-          </div>
-        </div>
-        <div class="cam chap">
-          <div class="ch">⚡ Caméra ChapCam <span class="fps" id="fps">30 FPS • Prêt</span></div>
-          <div class="box" id="chapBox">
-            <canvas id="resultCanvas"></canvas>
-            <div id="phChap" class="ph"><div>⚡</div><b>CHAPCAM</b><p>En attente d'avatar</p><small>Je mange un garba avec mon avatar - comme sur ta capture</small></div>
-            <div class="label" id="chapLabel">Avatar qui fera tes gestes</div>
-            <div class="watermark"><span>chapcam.com</span><div class="inf">∞</div></div>
-            <button class="tg">✈️</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="step"><span>3</span> Lance et bouge - ton avatar fait tout comme toi</div>
-      <div class="actions">
-        <button id="btnStart" class="big">▶️ LANCER LIVE SWAP 5.0 - Je mange un garba avec mon avatar</button>
-        <button id="btnStop" class="big ghost" style="display:none">⏹️ Arrêter</button>
-      </div>
-
-      <div class="explain">
-        <div class="e"><b>🎭 Tête</b><p>Bouge ta tête, l'avatar bouge</p></div>
-        <div class="e"><b>👄 Bouche</b><p>Parle, l'avatar parle</p></div>
-        <div class="e"><b>👀 Yeux</b><p>Cligne, l'avatar cligne</p></div>
-        <div class="e"><b>😊 Sourire</b><p>Souris, l'avatar sourit</p></div>
-      </div>
-
-      <div class="avatars">
-        <div class="av-card"><h4>Avatar sélectionné</h4><div class="av-sel"><img id="avSelImg" src=""><span id="avSelName">Phjg<br><small>Actif</small></span></div></div>
-        <div class="av-card"><h4>Mes avatars</h4><div class="list"><img src="https://i.pravatar.cc/80?img=1"><img src="https://i.pravatar.cc/80?img=5"><img src="https://i.pravatar.cc/80?img=8"><img src="https://i.pravatar.cc/80?img=12"><img src="https://i.pravatar.cc/80?img=15"><div class="add">+</div></div></div>
+      <div class="how">
+        <b>Comment ça marche comme ta vidéo :</b>
+        <p>1. Petit écran haut-gauche = TOI (noir) en direct</p>
+        <p>2. Grand écran = MARK qui fait EXACTEMENT tes gestes (mains levées, tête, bouche)</p>
+        <p>3. Même chemise blanche, même décor que ta vidéo TikTok</p>
       </div>
     </div>
-  </main>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 <script src="app.js"></script>
 </body>
