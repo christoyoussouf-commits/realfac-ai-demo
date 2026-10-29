@@ -3,95 +3,86 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>REALFACE AI Pro - ChapCam Style</title>
+<title>ChapCam - Clone</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 </head>
 <body>
-<header class="topbar">
-  <div class="logo-area">
-    <div class="infinity">∞</div>
-    <div>
-      <div class="logo">REALFACE <span>AI</span> <b>Pro</b></div>
-      <div class="sub">SWAP EN TEMPS RÉEL - Comme ChapCam</div>
+<div class="app">
+  <!-- HEADER comme chapcam.com -->
+  <header class="header">
+    <div class="logo">Chap<span>Cam</span></div>
+    <div class="header-right">
+      <div class="points"><span class="dot"></span> 0</div>
+      <button class="menu-btn">☰</button>
     </div>
+  </header>
+
+  <!-- BANDEAU ORANGE comme sur le site -->
+  <div class="banner">
+    <div class="banner-text">Tu as epuisé tes points — Recharge pour<br>continuer le swap</div>
+    <button class="btn-recharge">RECHARGER</button>
   </div>
-  <div class="pro-badge">PRO</div>
-</header>
 
-<main class="container">
-  <section class="hero">
-    <div class="hero-icon">∞</div>
-    <h1>Swap en temps réel<br>comme ChapCam Pro</h1>
-    <p>Ton visage remplace n'importe quelle photo/vidéo en direct. Bouche, yeux, sourire, tout est copié. Qualité Pro.</p>
-  </section>
+  <main class="main">
+    <!-- CIBLE DU SWAP - Qui tu veux devenir -->
+    <section class="card">
+      <div class="card-title"><span class="icon green">🖼️</span> Cible du swap <small>Qui tu veux devenir</small></div>
+      <p class="card-desc">La photo ou vidéo dont tu veux prendre l'apparence. Ton visage va remplacer le sien.</p>
+      <label class="upload-chap"><input type="file" id="targetFile" accept="image/*,video/*"><span>📁 Choisir cible (photo/vidéo)</span></label>
+      <div id="targetPreview" class="target-preview" style="display:none"><img id="targetImg"><video id="targetVideo" style="display:none" loop muted></video><p id="targetStatus" class="status-text">Analyse...</p></div>
+    </section>
 
-  <section class="card">
-    <h2>1️⃣ SOURCE - Qui tu veux devenir</h2>
-    <div class="upload-grid">
-      <label class="upload-box"><input type="file" id="targetFile" accept="image/*"><div class="box-icon">📸</div><span>Photo</span></label>
-      <label class="upload-box"><input type="file" id="videoFile" accept="video/*"><div class="box-icon">🎥</div><span>Vidéo</span></label>
-    </div>
-    <div id="targetPreview" class="preview-area" style="display:none">
-      <img id="targetImg"><video id="targetVideo" style="display:none" loop muted></video>
-      <div class="preview-info"><span id="targetStatus">Analyse...</span><button id="btnUseTarget" class="btn small">Utiliser</button></div>
-    </div>
-  </section>
+    <!-- SOURCE DU SWAP - Comme sur chapcam.com -->
+    <section class="card">
+      <div class="card-title"><span class="icon green">🎞️</span> Source du swap</div>
+      <p class="card-desc">Ta caméra en direct, ou une vidéo que tu importes.</p>
+      <div class="source-tabs">
+        <button id="tabCamera" class="tab active"><span>📷</span> Caméra</button>
+        <button id="tabVideo" class="tab"><span>🎞️</span> Vidéo</button>
+      </div>
+      <label class="upload-chap" id="sourceVideoLabel" style="display:none"><input type="file" id="sourceVideoFile" accept="video/*"><span>📁 Importer une vidéo source</span></label>
+    </section>
 
-  <section class="card main-card">
-    <div class="card-head">
-      <h2>2️⃣ LIVE SWAP - RÉSULTAT FINAL</h2>
-      <div class="live-dot"><span></span> LIVE</div>
-    </div>
-    
-    <div class="result-stage">
-      <canvas id="resultCanvas"></canvas>
-      <video id="video" autoplay playsinline muted style="display:none"></video>
-      <div id="placeholder" class="placeholder"><div class="ph-icon">∞</div><p>Choisis une photo, puis lance le swap</p><small>Fonctionne comme ChapCam Pro</small></div>
-      <div class="overlay-ui">
-        <div class="top-controls">
-          <button id="btnSwitch" class="icon-btn">🔄</button>
-          <span id="camStatus" class="status">En attente</span>
-          <button id="btnRecord" class="icon-btn">🔴</button>
-        </div>
-        <div class="bottom-controls">
-          <div class="gesture-bar">
-            <span id="mouthStatus">👄 Bouche</span>
-            <span id="eyeStatus">👁️ Yeux</span>
-            <span id="smileStatus">😊 Sourire</span>
+    <!-- CAMÉRA RÉELLE - Comme sur chapcam.com -->
+    <section class="card">
+      <div class="card-title"><span class="icon blue">📷</span> Caméra réelle</div>
+      <div class="camera-box">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+        <div id="placeholderReal" class="camera-placeholder"><div class="cam-icon">📷</div><p>Caméra inactive</p></div>
+        <div class="cam-overlay"><span id="realStatus" class="live-badge">INACTIF</span></div>
+      </div>
+    </section>
+
+    <!-- CAMÉRA CHAPCAM - Résultat swap -->
+    <section class="card highlight">
+      <div class="card-title"><span class="icon green">⚡</span> Caméra ChapCam <span class="expand">⤢</span></div>
+      <div class="camera-box chapcam-box">
+        <canvas id="resultCanvas"></canvas>
+        <div id="placeholderChap" class="camera-placeholder"><div class="cam-icon">⚡</div><p>En attente de cible + source</p><small>Ton visage remplacera la cible ici</small></div>
+        <div class="cam-overlay">
+          <span id="chapStatus" class="live-badge green">CHAPCAM</span>
+          <div class="gesture-dots">
+            <span id="dotMouth">👄</span>
+            <span id="dotEyes">👁️</span>
+            <span id="dotSmile">😊</span>
           </div>
         </div>
+        <button class="telegram-btn">✈️</button>
       </div>
-    </div>
-
-    <div class="controls-row">
-      <div class="control"><label>Zoom</label><input type="range" id="zoom" min="0.7" max="1.6" value="1.05" step="0.05"></div>
-      <div class="control"><label>Flou</label><input type="range" id="feather" min="0" max="25" value="14" step="1"></div>
-      <div class="control"><label>Lum.</label><input type="range" id="brightness" min="0.7" max="1.4" value="1.0" step="0.05"></div>
-    </div>
-
-    <div class="actions">
-      <button id="btnFront" class="btn primary big"><span>∞</span> LANCER SWAP TEMPS RÉEL</button>
-      <button id="btnStop" class="btn ghost" style="display:none">⏹️ Arrêter</button>
-    </div>
-    
-    <div class="mini-cams">
-      <div class="mini-box"><span>Toi</span><canvas id="miniCanvas"></canvas></div>
-      <div class="mini-box"><span>Cible</span><canvas id="targetMini"></canvas></div>
-    </div>
-  </section>
-
-  <section class="card">
-    <h2>✨ FONCTIONNALITÉS PRO (comme ChapCam)</h2>
-    <div class="features">
-      <div class="feat"><span>🔄</span><b>Face Swap Live</b><p>Ton visage remplace la photo en temps réel</p></div>
-      <div class="feat"><span>👄</span><b>Synchro lèvres</b><p>Bouche qui parle parfaitement</p></div>
-      <div class="feat"><span>👁️</span><b>Clignement yeux</b><p>Yeux qui clignent naturellement</p></div>
-      <div class="feat"><span>📱</span><b>iPhone/Android/PC</b><p>Marche partout sans installation</p></div>
-    </div>
-  </section>
-</main>
+      <div class="controls">
+        <button id="btnStart" class="btn-start">▶️ LANCER SWAP COMME CHAPCAM</button>
+        <button id="btnStop" class="btn-stop" style="display:none">⏹️ Arrêter</button>
+      </div>
+      <div class="sliders">
+        <label>Zoom <input type="range" id="zoom" min="0.7" max="1.6" value="1.05" step="0.05"></label>
+        <label>Flou <input type="range" id="feather" min="0" max="25" value="12"></label>
+      </div>
+    </section>
+  </main>
+</div>
 <script src="app.js"></script>
 </body>
 </html>
