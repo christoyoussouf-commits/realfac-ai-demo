@@ -1,213 +1,142 @@
 
 const video=document.getElementById('video');
-const realCanvas=document.getElementById('realCanvas');
 const resultCanvas=document.getElementById('resultCanvas');
 const rctx=resultCanvas.getContext('2d');
-const realCtx=realCanvas ? realCanvas.getContext('2d') : null;
 const placeholderReal=document.getElementById('placeholderReal');
 const placeholderChap=document.getElementById('placeholderChap');
-const statusText=document.getElementById('statusText');
+const statusEl=document.getElementById('status');
 const btnStart=document.getElementById('btnStart');
 const btnStop=document.getElementById('btnStop');
-const btnReal=document.getElementById('btnReal');
 const targetFile=document.getElementById('targetFile');
 const targetImg=document.getElementById('targetImg');
-const targetVideo=document.getElementById('targetVideo');
-const avatarPreview=document.getElementById('avatarPreview');
-const avatarSelected=document.getElementById('avatarSelected');
+const targetPreview=document.getElementById('targetPreview');
 
-let stream=null, isLive=false;
-let targetImage=null, targetType='image';
-let targetLandmarks=null, sourceLandmarks=null;
-let faceMesh=null, targetFaceMesh=null;
+let stream=null, isLive=false, targetImage=null, targetLoaded=false;
+let animationId=null;
 
-// ALWAYS SHOW UI - even if JS fails, UI is visible via CSS
+// Force display immediately - no blocking
 document.addEventListener('DOMContentLoaded', ()=>{
+  statusEl.textContent='✅ Interface affichée - Choisis une photo';
   placeholderReal.style.display='flex';
   placeholderChap.style.display='flex';
-  statusText.textContent='Prêt - Choisis un avatar et active ta caméra';
+  resultCanvas.width=640; resultCanvas.height=800;
 });
 
-function initMesh(){
-  try{
-    faceMesh=new FaceMesh({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`});
-    faceMesh.setOptions({maxNumFaces:1, refineLandmarks:true, minDetectionConfidence:0.5, minTrackingConfidence:0.5});
-    faceMesh.onResults(res=>{ if(isLive && res.multiFaceLandmarks && res.multiFaceLandmarks[0]){ sourceLandmarks=res.multiFaceLandmarks[0]; renderSwap(); } });
-    
-    targetFaceMesh=new FaceMesh({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`});
-    targetFaceMesh.setOptions({maxNumFaces:1, refineLandmarks:true, minDetectionConfidence:0.5});
-    
-    statusText.textContent='IA chargée - Choisis avatar';
-  }catch(e){
-    console.log('FaceMesh load failed, using simple mode', e);
-    statusText.textContent='Mode simple activé - Choisis avatar';
-  }
-}
-
-function renderSwap(){
-  if(!targetImage) return;
-  
-  try{
-    if(resultCanvas.width!==targetImage.naturalWidth && targetType==='image'){
-      resultCanvas.width=targetImage.naturalWidth; resultCanvas.height=targetImage.naturalHeight;
-    }
-    if(targetType==='video' && targetVideo.videoWidth){
-      resultCanvas.width=targetVideo.videoWidth; resultCanvas.height=targetVideo.videoHeight;
-    }
-    
-    rctx.clearRect(0,0,resultCanvas.width,resultCanvas.height);
-    if(targetType==='image') rctx.drawImage(targetImage,0,0,resultCanvas.width,resultCanvas.height);
-    else if(targetVideo) rctx.drawImage(targetVideo,0,0,resultCanvas.width,resultCanvas.height);
-    
-    if(sourceLandmarks && targetLandmarks){
-      const srcLeft=sourceLandmarks[33], srcRight=sourceLandmarks[263], srcNose=sourceLandmarks[1];
-      const tgtLeft=targetLandmarks[33], tgtRight=targetLandmarks[263], tgtNose=targetLandmarks[1];
-      const zoom=parseFloat(document.getElementById('zoom').value)||1.05;
-      const feather=parseFloat(document.getElementById('feather').value)||12;
-      
-      const srcEyeDist=Math.hypot(srcRight.x-srcLeft.x, srcRight.y-srcLeft.y);
-      const dstEyeDist=Math.hypot(tgtRight.x-tgtLeft.x, tgtRight.y-tgtLeft.y);
-      const scale=(dstEyeDist/srcEyeDist)*zoom*resultCanvas.width/video.videoWidth;
-      const srcAngle=Math.atan2(srcRight.y-srcLeft.y, srcRight.x-srcLeft.x);
-      const dstAngle=Math.atan2(tgtRight.y-tgtLeft.y, tgtRight.x-tgtLeft.x);
-      const rot=dstAngle-srcAngle;
-      const dstCX=tgtNose.x*resultCanvas.width, dstCY=tgtNose.y*resultCanvas.height;
-      const srcCX=srcNose.x*video.videoWidth, srcCY=srcNose.y*video.videoHeight;
-      
-      rctx.save();
-      const outline=[10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109];
-      rctx.beginPath();
-      for(let i=0;i<outline.length;i++){
-        const p=targetLandmarks[outline[i]];
-        const x=p.x*resultCanvas.width, y=p.y*resultCanvas.height;
-        if(i===0) rctx.moveTo(x,y); else rctx.lineTo(x,y);
-      }
-      rctx.closePath();
-      if(feather>0){ rctx.shadowBlur=feather; rctx.shadowColor='rgba(0,0,0,0.8)'; }
-      rctx.clip();
-      rctx.translate(dstCX, dstCY);
-      rctx.rotate(rot);
-      rctx.scale(scale, scale);
-      rctx.translate(-srcCX, -srcCY);
-      rctx.drawImage(video,0,0,video.videoWidth,video.videoHeight);
-      rctx.restore();
-      
-      rctx.globalCompositeOperation='soft-light'; rctx.globalAlpha=0.15;
-      if(targetType==='image') rctx.drawImage(targetImage,0,0,resultCanvas.width,resultCanvas.height);
-      else rctx.drawImage(targetVideo,0,0,resultCanvas.width,resultCanvas.height);
-      rctx.globalCompositeOperation='source-over'; rctx.globalAlpha=1;
-    } else {
-      // Simple mode: just show target with overlay of your video small
-      rctx.globalAlpha=0.85;
-      rctx.drawImage(video, resultCanvas.width*0.6, resultCanvas.height*0.05, resultCanvas.width*0.35, resultCanvas.height*0.3);
-      rctx.globalAlpha=1;
-    }
-  }catch(e){ console.log(e); }
-}
-
-function handleTarget(file){
-  const isVideo=file.type.startsWith('video');
+targetFile.addEventListener('change', e=>{
+  const file=e.target.files[0]; if(!file) return;
   const url=URL.createObjectURL(file);
-  avatarPreview.style.display='block';
-  if(isVideo){
-    targetType='video'; targetVideo.src=url; targetVideo.style.display='block'; targetImg.style.display='none';
-    targetVideo.onloadeddata=async ()=>{
-      resultCanvas.width=targetVideo.videoWidth; resultCanvas.height=targetVideo.videoHeight;
-      rctx.drawImage(targetVideo,0,0,resultCanvas.width,resultCanvas.height);
-      placeholderChap.style.display='none';
-      targetImage=targetVideo;
-      if(targetFaceMesh){
-        const c=document.createElement('canvas'); c.width=targetVideo.videoWidth; c.height=targetVideo.videoHeight;
-        c.getContext('2d').drawImage(targetVideo,0,0);
-        targetFaceMesh.onResults(res=>{ if(res.multiFaceLandmarks && res.multiFaceLandmarks[0]){ targetLandmarks=res.multiFaceLandmarks[0]; statusText.textContent='✅ Avatar prêt - Je mange un garba avec mon avatar'; } });
-        await targetFaceMesh.send({image:c});
-      } else { statusText.textContent='✅ Avatar vidéo prêt'; }
-      avatarSelected.style.display='flex';
-      document.getElementById('selectedAvatarImg').src=url;
-      document.getElementById('selAv').src=url;
-    };
-    targetVideo.play();
-  } else {
-    targetType='image'; targetImg.src=url; targetImg.style.display='block'; targetVideo.style.display='none';
-    targetImg.onload=async ()=>{
-      resultCanvas.width=targetImg.naturalWidth; resultCanvas.height=targetImg.naturalHeight;
-      rctx.drawImage(targetImg,0,0,resultCanvas.width,resultCanvas.height);
-      placeholderChap.style.display='none';
-      targetImage=targetImg;
-      if(targetFaceMesh){
-        const c=document.createElement('canvas'); c.width=targetImg.naturalWidth; c.height=targetImg.naturalHeight;
-        c.getContext('2d').drawImage(targetImg,0,0);
-        targetFaceMesh.onResults(res=>{ if(res.multiFaceLandmarks && res.multiFaceLandmarks[0]){ targetLandmarks=res.multiFaceLandmarks[0]; statusText.textContent='✅ Avatar prêt - Mode garba'; } else statusText.textContent='✅ Avatar prêt (mode simple)'; } });
-        await targetFaceMesh.send({image:c});
-      } else { statusText.textContent='✅ Avatar prêt'; }
-      avatarSelected.style.display='flex';
-      document.getElementById('selectedAvatarImg').src=url;
-      document.getElementById('selAv').src=url;
-    };
-  }
-}
-
-targetFile.addEventListener('change', e=>{ if(e.target.files[0]) handleTarget(e.target.files[0]); });
+  targetImg.src=url;
+  targetPreview.style.display='block';
+  targetImg.onload=()=>{
+    targetImage=targetImg;
+    targetLoaded=true;
+    resultCanvas.width=targetImg.naturalWidth;
+    resultCanvas.height=targetImg.naturalHeight;
+    rctx.drawImage(targetImg,0,0,resultCanvas.width,resultCanvas.height);
+    placeholderChap.style.display='none';
+    statusEl.textContent='✅ Photo cible chargée - Lance le swap';
+    document.getElementById('targetInfo').textContent='✅ Prête - Lance le swap Mark';
+  };
+  targetImg.onerror=()=>{ alert('Erreur photo'); };
+});
 
 async function startCamera(){
+  if(!targetLoaded){ alert('Choisis d\'abord une photo cible (ex: Mark) !'); return; }
   try{
     if(stream) stream.getTracks().forEach(t=>t.stop());
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
     video.srcObject=stream;
     await video.play();
     placeholderReal.style.display='none';
-    if(realCanvas){ realCanvas.width=video.videoWidth; realCanvas.height=video.videoHeight; }
-    document.getElementById('realBox').querySelector('.cam-label').textContent='Live - Toi';
-    statusText.textContent='🔴 LIVE - Comme sur ta capture : Je mange un garba avec mon avatar';
+    placeholderChap.style.display='none';
+    statusEl.textContent='🔴 LIVE - Comme ta capture Mark';
     btnStart.style.display='none'; btnStop.style.display='block';
     isLive=true;
-    
-    if(faceMesh){
-      try{
-        const {Camera} = await import('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js');
-      }catch(e){}
-      const camera = new (window.Camera || class{constructor(v,o){this.v=v;this.o=o} start(){ const loop=async()=>{ if(isLive){ await faceMesh.send({image:video}); requestAnimationFrame(loop); } }; loop(); }})(video, {
-        onFrame: async () => { if(faceMesh) await faceMesh.send({image:video}); },
-        width: 640,
-        height: 480
-      });
-      camera.start();
-    } else {
-      // Simple mode without faceMesh - just show video in both places
-      setInterval(()=>{ if(isLive) renderSwap(); }, 100);
-    }
-    
-    // Also render real camera
-    const renderReal=()=>{
-      if(!isLive) return;
-      if(realCanvas && realCtx){
-        realCtx.clearRect(0,0,realCanvas.width,realCanvas.height);
-        realCtx.drawImage(video,0,0,realCanvas.width,realCanvas.height);
-      }
-      requestAnimationFrame(renderReal);
-    };
-    renderReal();
-    
-  }catch(e){ alert('Caméra bloquée: '+e.message); }
+    loop();
+  }catch(e){
+    alert('Caméra bloquée: '+e.message+'\n\nSur iPhone: Réglages > Safari > Caméra > Autoriser\nSur Android: Autorise la caméra dans Chrome');
+    statusEl.textContent='❌ Caméra bloquée - Autorise';
+  }
 }
 
 function stopCamera(){
   isLive=false;
   if(stream) stream.getTracks().forEach(t=>t.stop()); stream=null;
+  if(animationId) cancelAnimationFrame(animationId);
   placeholderReal.style.display='flex';
   btnStart.style.display='block'; btnStop.style.display='none';
-  statusText.textContent='Arrêté';
+  statusEl.textContent='Arrêté';
+}
+
+function loop(){
+  if(!isLive) return;
+  
+  const zoom=parseFloat(document.getElementById('zoom').value)||1.1;
+  const size=parseFloat(document.getElementById('size').value)||35;
+  
+  // Clear and draw target background
+  rctx.clearRect(0,0,resultCanvas.width,resultCanvas.height);
+  rctx.drawImage(targetImage,0,0,resultCanvas.width,resultCanvas.height);
+  
+  // Simple face swap - your face replaces target face at center
+  // Face position: center of image, slightly upper (like Mark in your capture)
+  const faceCX=resultCanvas.width*0.5;
+  const faceCY=resultCanvas.height*0.38;
+  const faceW=resultCanvas.width*(size/100);
+  const faceH=faceW*1.35;
+  
+  // Save and clip to oval face shape
+  rctx.save();
+  rctx.beginPath();
+  rctx.ellipse(faceCX, faceCY, faceW*0.5, faceH*0.5, 0,0,Math.PI*2);
+  rctx.clip();
+  
+  // Draw your video scaled to face
+  // Estimate face area from video - use center crop
+  const vw=video.videoWidth, vh=video.videoHeight;
+  const cropSize=Math.min(vw, vh)*0.7;
+  const cropX=(vw-cropSize)/2, cropY=(vh-cropSize)/2*0.8;
+  
+  // Apply zoom and slight rotation based on time for live effect
+  const breath=Math.sin(Date.now()/800)*2;
+  
+  rctx.translate(faceCX, faceCY+breath);
+  rctx.scale(zoom, zoom);
+  rctx.translate(-faceCX, -faceCY);
+  
+  // Draw your face
+  rctx.drawImage(video, cropX, cropY, cropSize, cropSize, faceCX-faceW/2, faceCY-faceH/2, faceW, faceH);
+  
+  rctx.restore();
+  
+  // Blend edges for natural look
+  rctx.globalCompositeOperation='soft-light';
+  rctx.globalAlpha=0.12;
+  rctx.drawImage(targetImage,0,0,resultCanvas.width,resultCanvas.height);
+  rctx.globalCompositeOperation='source-over';
+  rctx.globalAlpha=1;
+  
+  // Add subtle border
+  rctx.strokeStyle='rgba(0,230,118,0.15)';
+  rctx.lineWidth=2;
+  rctx.beginPath();
+  rctx.ellipse(faceCX, faceCY, faceW*0.5, faceH*0.5, 0,0,Math.PI*2);
+  rctx.stroke();
+  
+  animationId=requestAnimationFrame(loop);
 }
 
 btnStart.addEventListener('click', startCamera);
 btnStop.addEventListener('click', stopCamera);
-if(btnReal) btnReal.addEventListener('click', startCamera);
 
-initMesh();
+// Also allow tap on real box to start
+document.getElementById('realBox').addEventListener('click', ()=>{ if(!isLive) startCamera(); });
+document.getElementById('chapBox').addEventListener('click', ()=>{ if(!isLive) startCamera(); });
 
-// Force display even if JS errors
+// Force show after 1s even if JS slow
 setTimeout(()=>{ 
-  if(document.getElementById('placeholderReal').style.display==='none' && !stream){
-    document.getElementById('placeholderReal').style.display='flex';
+  if(placeholderReal.style.display==='none' && !stream){
+    placeholderReal.style.display='flex';
   }
-}, 1000);
+  statusEl.textContent='✅ Prêt - Choisis photo Mark et lance';
+}, 1500);
