@@ -2,40 +2,69 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>REALFACE AI - VRAI GESTES</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>REALFACE AI - TU DEVIENS LA PHOTO</title>
 <link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 </head>
 <body>
 <header class="topbar">
-  <div class="logo">REALFACE <span>AI</span> <b class="beta">GESTES RÉELS</b></div>
-  <div class="tagline">BOUCHE • YEUX • SOURIRE • TÊTE = VRAI LIVE</div>
+  <div class="logo">REALFACE <span>AI</span> <b class="beta">FACE SWAP LIVE</b></div>
+  <div class="tagline">TU REMPLACES LA PHOTO - C'EST TOI QUI PARLES</div>
 </header>
 <main class="container">
   <section class="hero">
-    <h1>Photo qui<br>fait tes gestes.</h1>
-    <p>Version avec vraie détection bouche, yeux, sourire. La photo copie tout en direct.</p>
+    <h1>Deviens<br>la photo.</h1>
+    <p>Tu mets une photo (costume, avatar, star). Ton visage remplace son visage. Et tu parles avec tous tes gestes. iPhone, Android, PC.</p>
   </section>
+  
   <section class="card">
-    <h2>1️⃣ PHOTO CIBLE</h2>
-    <label class="upload"><input type="file" id="targetFile" accept="image/*"><span>📸 Choisis photo à animer</span><small>Visage de face, bien éclairé</small></label>
-    <div id="targetPreview" class="photo-preview" style="display:none"><img id="targetImg"><p id="targetStatus" class="hint">Analyse...</p></div>
+    <h2>1️⃣ PHOTO QUE TU VEUX DEVENIR</h2>
+    <p class="hint">Choisis une photo : un costume, un avatar, une autre personne. Ton visage va remplacer le sien.</p>
+    <label class="upload"><input type="file" id="targetFile" accept="image/*"><span>📸 Choisis qui tu veux devenir</span><small>Photo avec un visage de face</small></label>
+    <div id="targetPreview" class="photo-preview" style="display:none">
+      <img id="targetImg">
+      <p id="targetStatus" class="hint">Analyse...</p>
+    </div>
   </section>
+
   <section class="card">
-    <div class="card-head"><h2>2️⃣ LIVE - VRAIS GESTES</h2><span id="camStatus" class="status">Charge détection visage...</span></div>
-    <div class="dual-view">
-      <div class="view-box"><div class="view-label">TOI - CAMÉRA</div><div class="video-wrap"><video id="video" autoplay playsinline muted></video><canvas id="overlay"></canvas><div id="placeholder" class="placeholder"><div class="ph-icon">📷</div><p>Active caméra</p></div></div>
-      <div class="gesture-info"><span id="mouthInfo">Bouche: -</span> <span id="eyeInfo">Yeux: -</span> <span id="smileInfo">Sourire: -</span></div>
+    <div class="card-head">
+      <h2>2️⃣ RÉSULTAT FINAL - C'EST TOI DANS LA PHOTO</h2>
+      <span id="camStatus" class="status">En attente</span>
+    </div>
+    
+    <div class="single-view">
+      <div class="view-label">🎥 VIDÉO FINALE - TOI DANS LA PHOTO (tous tes gestes)</div>
+      <div class="video-wrap main-result">
+        <canvas id="resultCanvas"></canvas>
+        <video id="video" autoplay playsinline muted style="display:none"></video>
+        <canvas id="overlay" style="display:none"></canvas>
+        <div id="resultPlaceholder" class="placeholder"><div class="ph-icon">🪞</div><p>Choisis une photo, puis lance</p></div>
       </div>
-      <div class="view-box"><div class="view-label">PHOTO ANIMÉE - COPIE TES GESTES</div><div class="video-wrap result-wrap"><canvas id="resultCanvas"></canvas><div id="resultPlaceholder" class="placeholder"><div class="ph-icon">🖼️</div><p>Mets une photo</p></div></div>
-      <div class="gesture-info"><span id="resultInfo">En attente...</span></div>
+      <div class="mini-preview">
+        <div class="view-label">TOI (source caméra)</div>
+        <div class="video-wrap mini"><canvas id="miniCanvas"></canvas></div>
       </div>
     </div>
-    <div class="actions"><button id="btnFront" class="btn primary">▶️ Lancer animation gestes</button><button id="btnStop" class="btn ghost" style="display:none">⏹️ Stop</button></div>
+
+    <div class="actions">
+      <button id="btnFront" class="btn primary">▶️ DEVENIR LA PHOTO - Lancer</button>
+      <button id="btnStop" class="btn ghost" style="display:none">⏹️ Arrêter</button>
+      <button id="btnRecord" class="btn ghost">🔴 Enregistrer vidéo</button>
+    </div>
+    
+    <div class="controls">
+      <label>Zoom visage <input type="range" id="zoom" min="0.8" max="1.5" step="0.05" value="1.1"></label>
+      <label>Flou bords <input type="range" id="feather" min="0" max="30" value="12"></label>
+      <label><input type="checkbox" id="smooth" checked> Lissage</label>
+    </div>
+    
+    <div class="notice">
+      <strong>🎯 Comment ça marche :</strong> Ton visage est découpé en direct par IA (468 points). Il est recollé sur la photo à la place de l'ancien visage, avec ta bouche qui parle, tes yeux qui clignent, ta tête qui bouge. Sur iPhone, Android, PC.
+    </div>
   </section>
 </main>
 <script src="app.js"></script>
