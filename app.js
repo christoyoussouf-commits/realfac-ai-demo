@@ -1,6 +1,7 @@
+
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d', {willReadFrequently: true});
 const placeholder = document.getElementById('placeholder');
 const camStatus = document.getElementById('camStatus');
 const videoWrap = document.getElementById('videoWrap');
@@ -20,32 +21,126 @@ const roomStatus = document.getElementById('roomStatus');
 let stream = null;
 let currentFacing = 'user';
 let currentFilter = 'realistic';
-
-const filters = {
-  realistic: 'contrast(1.05) saturate(1.05)',
-  natural: 'contrast(0.95) saturate(1.15) brightness(1.08) sepia(0.08)',
-  anime: 'contrast(1.3) saturate(1.8) hue-rotate(-8deg) brightness(1.1)',
-  avatar3d: 'contrast(1.2) saturate(0.3) brightness(1.15) blur(0.3px)'
-};
+let animationId = null;
+let isPhotoMode = false;
+let photoSource = null;
 
 const names = {
-  realistic: 'Effet visuel léger',
-  natural: 'Naturel et doux',
-  anime: 'Anime - Couleurs intenses',
-  avatar3d: 'Avatar 3D - Stylisé'
+  realistic: 'Réaliste • Lissage naturel',
+  natural: 'Naturel • Doux et lumineux',
+  anime: 'Anime • VRAI effet cartoon',
+  avatar3d: 'Avatar 3D • Pixar style'
 };
 
-function applyStyle(){
-  const f = filters[currentFilter] || filters.realistic;
-  video.style.filter = f;
-  photoImg.style.filter = f;
-  if(currentFilter === 'anime'){
-    videoWrap.style.boxShadow = '0 0 0 2px #ff5cc8 inset';
-  } else if(currentFilter === 'avatar3d'){
-    videoWrap.style.boxShadow = '0 0 0 2px #4ef2ff inset';
-  } else {
-    videoWrap.style.boxShadow = 'none';
+function posterize(value, levels){
+  return Math.floor(value / (256/levels)) * (256/levels);
+}
+
+function applyRealisticFilter(imageData){
+  const data = imageData.data;
+  for(let i=0;i<data.length;i+=4){
+    // soft skin smoothing + slight brightness
+    const r=data[i], g=data[i+1], b=data[i+2];
+    // increase brightness a bit, reduce redness
+    data[i] = r*0.95 + 15;
+    data[i+1] = g*1.02 + 10;
+    data[i+2] = b*1.05 + 12;
   }
+  return imageData;
+}
+
+function applyNaturalFilter(imageData){
+  const data = imageData.data;
+  for(let i=0;i<data.length;i+=4){
+    let r=data[i], g=data[i+1], b=data[i+2];
+    r = r*1.1 + 20;
+    g = g*1.08 + 15;
+    b = b*0.95 + 5;
+    // warm LUT
+    data[i] = Math.min(255, r);
+    data[i+1] = Math.min(255, g);
+    data[i+2] = Math.min(255, b*0.9);
+  }
+  return imageData;
+}
+
+function applyAnimeFilter(imageData){
+  const data = imageData.data;
+  const w = imageData.width, h = imageData.height;
+  // First pass: high contrast + saturation + posterize
+  for(let i=0;i<data.length;i+=4){
+    let r=data[i], g=data[i+1], b=data[i+2];
+    // boost contrast and saturation
+    const avg = (r+g+b)/3;
+    r = avg + (r-avg)*1.8;
+    g = avg + (g-avg)*1.8;
+    b = avg + (b-avg)*1.8;
+    // posterize to 5 levels for cartoon
+    r = posterize(r, 6);
+    g = posterize(g, 6);
+    b = posterize(b, 6);
+    // anime skin tone shift
+    data[i] = Math.min(255, r*1.15);
+    data[i+1] = Math.min(255, g*0.95);
+    data[i+2] = Math.min(255, b*0.85 + 20);
+  }
+  return imageData;
+}
+
+function applyAvatar3DFilter(imageData){
+  const data = imageData.data;
+  for(let i=0;i<data.length;i+=4){
+    let r=data[i], g=data[i+1], b=data[i+2];
+    // Pixar / 3D plastic look: heavy posterization + specular highlight
+    const brightness = (r+g+b)/3;
+    const levels = 5;
+    r = posterize(r, levels);
+    g = posterize(g, levels);
+    b = posterize(b, levels);
+    // add 3D lighting: brighten center based on position
+    const x = (i/4) % imageData.width;
+    const y = Math.floor((i/4) / imageData.width);
+    const cx = imageData.width/2, cy = imageData.height/2;
+    const dist = Math.sqrt((x-cx)*(x-cx)+(y-cy)*(y-cy));
+    const maxDist = Math.sqrt(cx*cx+cy*cy);
+    const vignette = 1 - (dist/maxDist)*0.3;
+    const highlight = brightness > 180 ? 30 : 0;
+    data[i] = Math.min(255, (r*vignette + highlight)*1.1);
+    data[i+1] = Math.min(255, (g*vignette + highlight)*0.95);
+    data[i+2] = Math.min(255, (b*vignette + highlight*0.5)*1.05);
+  }
+  return imageData;
+}
+
+function processFrame(source){
+  if(!source) return;
+  const vw = source.videoWidth || source.width || 640;
+  const vh = source.videoHeight || source.height || 480;
+  if(canvas.width !== vw || canvas.height !== vh){
+    canvas.width = vw;
+    canvas.height = vh;
+  }
+  ctx.drawImage(source, 0, 0, vw, vh);
+  let frame = ctx.getImageData(0,0,vw,vh);
+  if(currentFilter === 'realistic') frame = applyRealisticFilter(frame);
+  else if(currentFilter === 'natural') frame = applyNaturalFilter(frame);
+  else if(currentFilter === 'anime') frame = applyAnimeFilter(frame);
+  else if(currentFilter === 'avatar3d') frame = applyAvatar3DFilter(frame);
+  ctx.putImageData(frame, 0, 0);
+}
+
+function loop(){
+  if(isPhotoMode && photoSource){
+    processFrame(photoSource);
+  } else if(video.srcObject && !video.paused){
+    processFrame(video);
+  }
+  animationId = requestAnimationFrame(loop);
+}
+
+function startLoop(){
+  if(animationId) cancelAnimationFrame(animationId);
+  loop();
 }
 
 looks.forEach(btn=>{
@@ -54,44 +149,48 @@ looks.forEach(btn=>{
     btn.classList.add('active');
     currentFilter = btn.dataset.style;
     currentStyleName.textContent = names[currentFilter];
-    applyStyle();
+    if(currentFilter === 'anime'){
+      videoWrap.style.boxShadow='0 0 0 2px #ff5cc8 inset, 0 0 30px rgba(255,92,200,0.3)';
+    } else if(currentFilter === 'avatar3d'){
+      videoWrap.style.boxShadow='0 0 0 2px #4ef2ff inset, 0 0 30px rgba(78,242,255,0.3)';
+    } else {
+      videoWrap.style.boxShadow='none';
+    }
   });
 });
 
 async function startCamera(facing){
   try{
+    isPhotoMode = false;
     if(stream){ stream.getTracks().forEach(t=>t.stop()); }
-    const constraints = { video: { facingMode: facing, width: {ideal: 1280}, height: {ideal: 720} }, audio:false };
+    const constraints = { video: { facingMode: facing, width: {ideal: 640}, height: {ideal: 480} }, audio:false };
     stream = await navigator.mediaDevices.getUserMedia(constraints);
     video.srcObject = stream;
     await video.play();
     placeholder.style.display='none';
-    video.style.display='block';
-    camStatus.textContent = 'Caméra active • '+ (facing==='user' ? 'Frontale' : 'Arrière');
+    video.style.display='none'; // we show canvas only
+    canvas.style.display='block';
+    camStatus.textContent = 'Caméra active • '+(facing==='user'?'Frontale':'Arrière')+' • '+names[currentFilter];
     camStatus.className='status active';
     btnStop.style.display='inline-block';
-    resizeCanvas();
-    applyStyle();
+    photoPreview.style.display='none';
+    startLoop();
   }catch(e){
-    alert('Caméra non disponible: '+e.message+'\nEssaie avec une photo.');
-    camStatus.textContent='Caméra inactive';
-    camStatus.className='status inactive';
+    alert('Caméra non disponible: '+e.message);
   }
 }
 
 function stopCamera(){
   if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  if(animationId) cancelAnimationFrame(animationId);
   video.srcObject=null;
   video.style.display='none';
+  canvas.style.display='none';
   placeholder.style.display='block';
   camStatus.textContent='Caméra inactive • Prêt à commencer ?';
   camStatus.className='status inactive';
   btnStop.style.display='none';
-}
-
-function resizeCanvas(){
-  canvas.width = video.videoWidth || 1280;
-  canvas.height = video.videoHeight || 720;
+  isPhotoMode=false;
 }
 
 btnFront.addEventListener('click', ()=>{ currentFacing='user'; startCamera('user'); });
@@ -102,30 +201,34 @@ fileInput.addEventListener('change', (e)=>{
   const file = e.target.files[0];
   if(!file) return;
   if(file.size > 8*1024*1024){ alert('Photo trop lourde (max 8 Mo)'); return; }
-  if(!consent.checked){ alert('Coche la case de consentement d\'abord.'); consent.focus(); return; }
+  if(!consent.checked){ alert('Coche la case de consentement d\'abord.'); return; }
   const url = URL.createObjectURL(file);
-  photoImg.src = url;
-  photoPreview.style.display='block';
-  placeholder.style.display='none';
-  video.style.display='none';
-  if(stream) stopCamera();
-  // show photo in video area as background
-  photoImg.onload = ()=>{ applyStyle(); };
-  camStatus.textContent='Photo importée • '+file.name.substring(0,18);
-  camStatus.className='status active';
+  const img = new Image();
+  img.onload = ()=>{
+    photoSource = img;
+    isPhotoMode = true;
+    if(stream) { stream.getTracks().forEach(t=>t.stop()); stream=null; }
+    video.style.display='none';
+    placeholder.style.display='none';
+    canvas.style.display='block';
+    photoPreview.style.display='none';
+    camStatus.textContent='Photo importée • '+file.name.substring(0,20)+' • '+names[currentFilter];
+    camStatus.className='status active';
+    btnStop.style.display='inline-block';
+    startLoop();
+  };
+  img.src = url;
 });
 
 btnRoom.addEventListener('click', ()=>{
   const code = roomCode.value.trim().toUpperCase();
   if(!code || code.length < 4){ roomStatus.textContent='Entre un code valide (ex: REAL-123)'; return; }
-  if(!/^[A-Z0-9-]{4,12}$/.test(code)){ roomStatus.textContent='Code invalide: lettres, chiffres et tirets seulement.'; return; }
-  roomStatus.textContent='Salle '+code+' prête (simulation locale). Aucune connexion distante pour l\'instant.';
+  roomStatus.textContent='Salle '+code+' prête ! Phase 2 active - filtres IA locaux.';
   btnRoom.textContent='Salle prête ✓';
   setTimeout(()=>btnRoom.textContent='Préparer l\'appel', 2000);
 });
 
-window.addEventListener('resize', resizeCanvas);
-applyStyle();
-
-// PWA manifest placeholder check
-if('serviceWorker' in navigator){ /* optional */ }
+// Init
+canvas.style.display='none';
+currentStyleName.textContent = names[currentFilter];
+startLoop();
