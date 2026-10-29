@@ -2,57 +2,40 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>REALFACE AI - LIVE SWAP FIXED</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>REALFACE AI - VRAI GESTES</title>
 <link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
 </head>
 <body>
 <header class="topbar">
-  <div class="logo">REALFACE <span>AI</span> <b class="beta">LIVE V2</b></div>
-  <div class="tagline">PHOTO QUI BOUGE COMME TOI - VERSION STABLE</div>
+  <div class="logo">REALFACE <span>AI</span> <b class="beta">GESTES RÉELS</b></div>
+  <div class="tagline">BOUCHE • YEUX • SOURIRE • TÊTE = VRAI LIVE</div>
 </header>
 <main class="container">
   <section class="hero">
-    <h1>Ta photo<br>devient une vidéo live.</h1>
-    <p>Version corrigée qui marche sur tous les téléphones. Sans chargement qui bloque.</p>
+    <h1>Photo qui<br>fait tes gestes.</h1>
+    <p>Version avec vraie détection bouche, yeux, sourire. La photo copie tout en direct.</p>
   </section>
   <section class="card">
-    <h2>1️⃣ PHOTO À ANIMER</h2>
-    <label class="upload" id="targetLabel">
-      <input type="file" id="targetFile" accept="image/*">
-      <span id="uploadText">📸 Choisis la photo qui va bouger</span>
-      <small>Photo de face, bien visible</small>
-    </label>
-    <div id="targetPreview" class="photo-preview" style="display:none">
-      <img id="targetImg">
-      <div class="photo-actions"><button id="btnUsePhoto" class="btn primary">Utiliser cette photo</button></div>
-    </div>
+    <h2>1️⃣ PHOTO CIBLE</h2>
+    <label class="upload"><input type="file" id="targetFile" accept="image/*"><span>📸 Choisis photo à animer</span><small>Visage de face, bien éclairé</small></label>
+    <div id="targetPreview" class="photo-preview" style="display:none"><img id="targetImg"><p id="targetStatus" class="hint">Analyse...</p></div>
   </section>
-
-  <section class="card camera-card">
-    <div class="card-head">
-      <h2>2️⃣ LIVE ANIMATION</h2>
-      <span id="camStatus" class="status">En attente de photo</span>
-    </div>
+  <section class="card">
+    <div class="card-head"><h2>2️⃣ LIVE - VRAIS GESTES</h2><span id="camStatus" class="status">Charge détection visage...</span></div>
     <div class="dual-view">
-      <div class="view-box">
-        <div class="view-label">TOI</div>
-        <div class="video-wrap"><video id="video" autoplay playsinline muted></video><canvas id="overlay"></canvas><div id="placeholder" class="placeholder"><div class="ph-icon">📷</div><p>Active ta caméra</p></div></div>
+      <div class="view-box"><div class="view-label">TOI - CAMÉRA</div><div class="video-wrap"><video id="video" autoplay playsinline muted></video><canvas id="overlay"></canvas><div id="placeholder" class="placeholder"><div class="ph-icon">📷</div><p>Active caméra</p></div></div>
+      <div class="gesture-info"><span id="mouthInfo">Bouche: -</span> <span id="eyeInfo">Yeux: -</span> <span id="smileInfo">Sourire: -</span></div>
       </div>
-      <div class="view-box">
-        <div class="view-label">PHOTO ANIMÉE - VIDÉO LIVE</div>
-        <div class="video-wrap result-wrap"><canvas id="resultCanvas"></canvas><div id="resultPlaceholder" class="placeholder"><div class="ph-icon">🖼️</div><p>Mets une photo d'abord</p></div></div>
+      <div class="view-box"><div class="view-label">PHOTO ANIMÉE - COPIE TES GESTES</div><div class="video-wrap result-wrap"><canvas id="resultCanvas"></canvas><div id="resultPlaceholder" class="placeholder"><div class="ph-icon">🖼️</div><p>Mets une photo</p></div></div>
+      <div class="gesture-info"><span id="resultInfo">En attente...</span></div>
       </div>
     </div>
-    <div class="actions">
-      <button id="btnFront" class="btn primary">▶️ Activer caméra + animation</button>
-      <button id="btnStop" class="btn ghost" style="display:none">⏹️ Arrêter</button>
-    </div>
-    <div class="controls">
-      <label>Suivi tête <input type="range" id="sensitivity" min="0.2" max="2" step="0.1" value="1"></label>
-      <label><input type="checkbox" id="smooth" checked> Lissage fluide</label>
-    </div>
-    <p class="hint">👉 Une fois lancé, bouge la tête, souris, ouvre la bouche. La photo de droite bouge en temps réel comme une vraie vidéo deepfake !</p>
+    <div class="actions"><button id="btnFront" class="btn primary">▶️ Lancer animation gestes</button><button id="btnStop" class="btn ghost" style="display:none">⏹️ Stop</button></div>
   </section>
 </main>
 <script src="app.js"></script>
