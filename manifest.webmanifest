@@ -1,0 +1,9 @@
+{
+  "name": "REALFACE AI - Votre Caméra, Votre Style",
+  "short_name": "REALFACE AI",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#7c5cff",
+  "icons": []
+}

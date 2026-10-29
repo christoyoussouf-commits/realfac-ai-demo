@@ -1,38 +1,108 @@
-RREALFACE AI BÊTA
-VOTRE CAMÉRA · VOTRE STYLE
-Changez de style.
-Restez vous-même.
-Testez des effets visuels pendant votre aperçu caméra et préparez votre expérience d’appel.
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>REALFACE AI - Votre Caméra, Votre Style</title>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0a0a0f">
+</head>
+<body>
+<header class="topbar">
+  <div class="logo">REALFACE <span>AI</span> <b class="beta">BÊTA</b></div>
+  <div class="tagline">VOTRE CAMÉRA • VOTRE STYLE</div>
+</header>
 
-APERÇU EN DIRECT
-Votre caméra
-Caméra inactive
-◉
-Prêt à commencer ? Activez la caméra ou importez une photo.
-Aperçu local
-↻
-Activer la caméra Arrêter
-L’image de la caméra est traitée visuellement dans cette page. Aucun appel distant n’est encore connecté.
+<main class="container">
+  <section class="hero">
+    <h1>Changez de style.<br>Restez vous-même.</h1>
+    <p>Testez des effets visuels pendant votre aperçu caméra et préparez votre expérience d'appel.</p>
+  </section>
 
-CHOISISSEZ UN LOOK
-Styles d’avatar
-4 styles
-◉RéalisteNaturel et doux ✦AnimeCouleurs intenses ◇Avatar 3DEffet stylisé ✳PersonnaliséRéglez l’effet
-Style réaliste sélectionné. Effet visuel léger.
+  <section class="card camera-card">
+    <div class="card-head">
+      <h2>APERÇU EN DIRECT</h2>
+      <span id="camStatus" class="status inactive">Caméra inactive • Prêt à commencer ?</span>
+    </div>
+    
+    <div class="video-wrap" id="videoWrap">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="canvas"></canvas>
+      <div id="placeholder" class="placeholder">
+        <div class="ph-icon">📷</div>
+        <p>Activez la caméra ou importez une photo</p>
+        <small>Aperçu local • Aucun appel distant n'est encore connecté</small>
+      </div>
+    </div>
 
-OPTION PHOTO
-Préparer un avatar photo
-Importez une photo JPG, PNG ou WebP de 8 Mo maximum. Elle est affichée localement dans votre navigateur.
+    <div class="actions">
+      <button id="btnFront" class="btn primary">Activer caméra</button>
+      <button id="btnBack" class="btn ghost">Caméra arrière</button>
+      <button id="btnStop" class="btn ghost" style="display:none">Arrêter</button>
+    </div>
+    <p class="hint">L'image de la caméra est traitée visuellement dans cette page. Aucun appel distant n'est encore connecté.</p>
+  </section>
 
-＋Choisir une photoAppuyez pour sélectionner une image Je confirme avoir le droit d’utiliser cette photo et, si elle représente une autre personne, son consentement.
-PROCHAINE ÉTAPE
-Préparer une salle d’appel
-Cette version vérifie le code de salle, mais ne connecte pas encore deux personnes entre elles.
+  <section class="card">
+    <div class="card-head">
+      <h2>CHOISISSEZ UN LOOK</h2>
+      <span class="count"><span id="styleCount">4</span> styles • <span id="currentStyleName">Effet visuel léger</span></span>
+    </div>
+    <div class="looks" id="looks">
+      <button class="look active" data-style="realistic">
+        <span class="look-emoji">✨</span>
+        <strong>Style réaliste</strong>
+        <small>Réaliste - Effet visuel léger</small>
+      </button>
+      <button class="look" data-style="natural">
+        <span class="look-emoji">🍃</span>
+        <strong>Naturel et doux</strong>
+        <small>Adoucit et éclaire</small>
+      </button>
+      <button class="look" data-style="anime">
+        <span class="look-emoji">🎨</span>
+        <strong>Anime</strong>
+        <small>Couleurs intenses</small>
+      </button>
+      <button class="look" data-style="avatar3d">
+        <span class="look-emoji">🤖</span>
+        <strong>Avatar 3D</strong>
+        <small>Effet stylisé • Personnalisé</small>
+      </button>
+    </div>
+  </section>
 
-Code de salle 
-Ex. REAL-123
- Préparer l’appel
-Aucun appel en cours.
+  <section class="card">
+    <h2>OPTION PHOTO</h2>
+    <p class="hint">Importer une photo JPG, PNG ou WebP de 8 Mo max. Elle est affichée localement dans votre navigateur.</p>
+    <label class="upload">
+      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
+      <span>Choisir une photo</span>
+      <small>Appuyez pour sélectionner une image</small>
+    </label>
+    <label class="check"><input type="checkbox" id="consent"> Je confirme avoir le droit d'utiliser cette photo et, si elle représente une autre personne, son consentement.</label>
+    <div id="photoPreview" class="photo-preview" style="display:none">
+      <img id="photoImg" alt="">
+    </div>
+  </section>
 
-À savoir : les styles actuels sont des filtres visuels CSS, pas une transformation IA du visage. La transformation réelle du visage et les appels vidéo entre utilisateurs nécessitent encore un modèle IA et un service de connexion WebRTC.
-REALFACE AI · Prototype de démonstration ·
+  <section class="card">
+    <h2>PROCHAINE ÉTAPE</h2>
+    <p class="hint">Préparer une salle d'appel. Cette version vérifie le code de salle, mais ne connecte pas encore deux personnes entre elles.</p>
+    <div class="room">
+      <input id="roomCode" placeholder="Ex. REAL-123" maxlength="12">
+      <button id="btnRoom" class="btn primary">Préparer l'appel</button>
+    </div>
+    <p id="roomStatus" class="hint">Aucun appel en cours.</p>
+    <div class="notice">
+      <strong>A savoir :</strong> les styles actuels sont des filtres visuels CSS, pas une transformation IA du visage. La transformation réelle du visage et les appels vidéo entre utilisateurs nécessitent encore un modèle IA et un service de connexion WebRTC.
+    </div>
+  </section>
+</main>
+
+<footer>REALFACE AI • Prototype de démonstration</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

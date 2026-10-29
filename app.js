@@ -1,160 +1,131 @@
-const $ = (id) => document.getElementById(id);
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const placeholder = document.getElementById('placeholder');
+const camStatus = document.getElementById('camStatus');
+const videoWrap = document.getElementById('videoWrap');
+const btnFront = document.getElementById('btnFront');
+const btnBack = document.getElementById('btnBack');
+const btnStop = document.getElementById('btnStop');
+const looks = document.querySelectorAll('.look');
+const currentStyleName = document.getElementById('currentStyleName');
+const fileInput = document.getElementById('fileInput');
+const photoPreview = document.getElementById('photoPreview');
+const photoImg = document.getElementById('photoImg');
+const consent = document.getElementById('consent');
+const roomCode = document.getElementById('roomCode');
+const btnRoom = document.getElementById('btnRoom');
+const roomStatus = document.getElementById('roomStatus');
 
 let stream = null;
-let photoUrl = null;
-let facingMode = "user";
-let selectedStyle = "realistic";
+let currentFacing = 'user';
+let currentFilter = 'realistic';
 
-const styleCopy = {
-  realistic: "Style réaliste sélectionné. Filtre léger pour conserver un rendu naturel.",
-  anime: "Style anime sélectionné. Couleurs et contraste renforcés : ce n’est pas encore une conversion IA en dessin animé.",
-  avatar3d: "Style avatar 3D sélectionné. Filtre stylisé : un véritable avatar 3D nécessite un modèle dédié.",
-  custom: "Style personnalisé sélectionné. Ajustez l’intensité et la teinte ci-dessous."
+const filters = {
+  realistic: 'contrast(1.05) saturate(1.05)',
+  natural: 'contrast(0.95) saturate(1.15) brightness(1.08) sepia(0.08)',
+  anime: 'contrast(1.3) saturate(1.8) hue-rotate(-8deg) brightness(1.1)',
+  avatar3d: 'contrast(1.2) saturate(0.3) brightness(1.15) blur(0.3px)'
 };
 
-function setMessage(text) {
-  $("callMessage").textContent = text;
-}
+const names = {
+  realistic: 'Effet visuel léger',
+  natural: 'Naturel et doux',
+  anime: 'Anime - Couleurs intenses',
+  avatar3d: 'Avatar 3D - Stylisé'
+};
 
-function setCameraStatus(text, active = false) {
-  $("cameraStatus").textContent = text;
-  $("cameraStatus").classList.toggle("active", active);
-  $("cameraStatus").innerHTML = `<i></i> ${text}`;
-}
-
-async function startCamera() {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    alert("La caméra nécessite un navigateur compatible et une adresse HTTPS (ou localhost).");
-    return;
-  }
-  if (stream) stopCamera();
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false
-    });
-    $("cameraVideo").srcObject = stream;
-    $("cameraVideo").hidden = false;
-    $("placeholder").hidden = true;
-    $("photoPreview").hidden = true;
-    setCameraStatus("Caméra active", true);
-    $("startCamera").disabled = true;
-    $("stopCamera").disabled = false;
-    $("flipCamera").hidden = false;
-  } catch (error) {
-    setCameraStatus("Caméra inactive");
-    alert("Impossible d’ouvrir la caméra. Vérifiez les autorisations du navigateur et réessayez. " + error.message);
+function applyStyle(){
+  const f = filters[currentFilter] || filters.realistic;
+  video.style.filter = f;
+  photoImg.style.filter = f;
+  if(currentFilter === 'anime'){
+    videoWrap.style.boxShadow = '0 0 0 2px #ff5cc8 inset';
+  } else if(currentFilter === 'avatar3d'){
+    videoWrap.style.boxShadow = '0 0 0 2px #4ef2ff inset';
+  } else {
+    videoWrap.style.boxShadow = 'none';
   }
 }
 
-function stopCamera() {
-  if (stream) stream.getTracks().forEach(track => track.stop());
-  stream = null;
-  $("cameraVideo").srcObject = null;
-  $("cameraVideo").hidden = true;
-  $("placeholder").hidden = false;
-  setCameraStatus("Caméra inactive");
-  $("startCamera").disabled = false;
-  $("stopCamera").disabled = true;
-}
-
-$("startCamera").addEventListener("click", startCamera);
-$("stopCamera").addEventListener("click", stopCamera);
-
-$("flipCamera").addEventListener("click", async () => {
-  facingMode = facingMode === "user" ? "environment" : "user";
-  if (stream) await startCamera();
-});
-
-function chooseStyle(style) {
-  selectedStyle = style;
-  $("preview").classList.remove("effect-realistic", "effect-anime", "effect-avatar3d", "effect-custom");
-  $("preview").classList.add(`effect-${style}`);
-  document.querySelectorAll(".style-card").forEach(button => {
-    const active = button.dataset.style === style;
-    button.classList.toggle("selected", active);
-    button.setAttribute("aria-pressed", String(active));
+looks.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    looks.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.style;
+    currentStyleName.textContent = names[currentFilter];
+    applyStyle();
   });
-  $("customControls").hidden = style !== "custom";
-  $("styleMessage").textContent = styleCopy[style];
-  applyCustomEffect();
+});
+
+async function startCamera(facing){
+  try{
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); }
+    const constraints = { video: { facingMode: facing, width: {ideal: 1280}, height: {ideal: 720} }, audio:false };
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = stream;
+    await video.play();
+    placeholder.style.display='none';
+    video.style.display='block';
+    camStatus.textContent = 'Caméra active • '+ (facing==='user' ? 'Frontale' : 'Arrière');
+    camStatus.className='status active';
+    btnStop.style.display='inline-block';
+    resizeCanvas();
+    applyStyle();
+  }catch(e){
+    alert('Caméra non disponible: '+e.message+'\nEssaie avec une photo.');
+    camStatus.textContent='Caméra inactive';
+    camStatus.className='status inactive';
+  }
 }
 
-document.querySelectorAll(".style-card").forEach(button => {
-  button.addEventListener("click", () => chooseStyle(button.dataset.style));
-});
-
-function applyCustomEffect() {
-  const intensity = Number($("intensity").value) / 100;
-  const tone = Number($("tone").value);
-  $("intensityValue").value = `${$("intensity").value}%`;
-  $("intensityValue").textContent = `${$("intensity").value}%`;
-  $("preview").style.setProperty("--custom-brightness", String(intensity));
-  $("preview").style.setProperty("--custom-saturation", String(intensity));
-  $("preview").style.setProperty("--custom-hue", `${tone}deg`);
+function stopCamera(){
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  video.srcObject=null;
+  video.style.display='none';
+  placeholder.style.display='block';
+  camStatus.textContent='Caméra inactive • Prêt à commencer ?';
+  camStatus.className='status inactive';
+  btnStop.style.display='none';
 }
-$("intensity").addEventListener("input", applyCustomEffect);
-$("tone").addEventListener("input", applyCustomEffect);
 
-$("photoInput").addEventListener("change", event => {
-  const file = event.target.files?.[0];
-  if (!file) return;
-  if (!$("photoConsent").checked) {
-    alert("Cochez d’abord la confirmation des droits et du consentement.");
-    event.target.value = "";
-    return;
-  }
-  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 8 * 1024 * 1024) {
-    alert("Choisissez une image JPG, PNG ou WebP de moins de 8 Mo.");
-    event.target.value = "";
-    return;
-  }
-  if (photoUrl) URL.revokeObjectURL(photoUrl);
-  photoUrl = URL.createObjectURL(file);
-  $("photoPreview").src = photoUrl;
-  $("photoPreview").hidden = false;
-  $("cameraVideo").hidden = true;
-  $("placeholder").hidden = true;
-  $("photoArea").hidden = false;
-  $("stopCamera").disabled = true;
-  if (stream) {
-    stream.getTracks().forEach(track => track.stop());
-    stream = null;
-    $("cameraVideo").srcObject = null;
-  }
-  $("startCamera").disabled = false;
-  setCameraStatus("Photo affichée");
-});
-
-$("removePhoto").addEventListener("click", () => {
-  if (photoUrl) URL.revokeObjectURL(photoUrl);
-  photoUrl = null;
-  $("photoInput").value = "";
-  $("photoPreview").removeAttribute("src");
-  $("photoPreview").hidden = true;
-  $("photoArea").hidden = true;
-  $("placeholder").hidden = false;
-  setCameraStatus("Caméra inactive");
-});
-
-$("joinCall").addEventListener("click", () => {
-  const code = $("roomCode").value.trim().toUpperCase();
-  if (!/^[A-Z0-9-]{3,32}$/.test(code)) {
-    setMessage("Entrez un code de 3 à 32 lettres, chiffres ou tirets.");
-    $("roomCode").focus();
-    return;
-  }
-  setMessage(`Salle ${code} préparée. La connexion entre utilisateurs n’est pas encore activée dans cette version.`);
-});
-
-$("year").textContent = new Date().getFullYear();
-window.addEventListener("beforeunload", () => {
-  if (stream) stream.getTracks().forEach(track => track.stop());
-  if (photoUrl) URL.revokeObjectURL(photoUrl);
-});
-
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js").catch(() => {});
-  });
+function resizeCanvas(){
+  canvas.width = video.videoWidth || 1280;
+  canvas.height = video.videoHeight || 720;
 }
+
+btnFront.addEventListener('click', ()=>{ currentFacing='user'; startCamera('user'); });
+btnBack.addEventListener('click', ()=>{ currentFacing='environment'; startCamera('environment'); });
+btnStop.addEventListener('click', stopCamera);
+
+fileInput.addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  if(file.size > 8*1024*1024){ alert('Photo trop lourde (max 8 Mo)'); return; }
+  if(!consent.checked){ alert('Coche la case de consentement d\'abord.'); consent.focus(); return; }
+  const url = URL.createObjectURL(file);
+  photoImg.src = url;
+  photoPreview.style.display='block';
+  placeholder.style.display='none';
+  video.style.display='none';
+  if(stream) stopCamera();
+  // show photo in video area as background
+  photoImg.onload = ()=>{ applyStyle(); };
+  camStatus.textContent='Photo importée • '+file.name.substring(0,18);
+  camStatus.className='status active';
+});
+
+btnRoom.addEventListener('click', ()=>{
+  const code = roomCode.value.trim().toUpperCase();
+  if(!code || code.length < 4){ roomStatus.textContent='Entre un code valide (ex: REAL-123)'; return; }
+  if(!/^[A-Z0-9-]{4,12}$/.test(code)){ roomStatus.textContent='Code invalide: lettres, chiffres et tirets seulement.'; return; }
+  roomStatus.textContent='Salle '+code+' prête (simulation locale). Aucune connexion distante pour l\'instant.';
+  btnRoom.textContent='Salle prête ✓';
+  setTimeout(()=>btnRoom.textContent='Préparer l\'appel', 2000);
+});
+
+window.addEventListener('resize', resizeCanvas);
+applyStyle();
+
+// PWA manifest placeholder check
+if('serviceWorker' in navigator){ /* optional */ }
