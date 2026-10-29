@@ -2,86 +2,66 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>ChapCam - Clone</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>REALFACE - Comme ta capture Mark</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 </head>
 <body>
-<div class="app">
-  <!-- HEADER comme chapcam.com -->
-  <header class="header">
-    <div class="logo">Chap<span>Cam</span></div>
-    <div class="header-right">
-      <div class="points"><span class="dot"></span> 0</div>
-      <button class="menu-btn">☰</button>
-    </div>
-  </header>
-
-  <!-- BANDEAU ORANGE comme sur le site -->
-  <div class="banner">
-    <div class="banner-text">Tu as epuisé tes points — Recharge pour<br>continuer le swap</div>
-    <button class="btn-recharge">RECHARGER</button>
+<div class="tiktok-player">
+  <!-- Top status bar like iPhone -->
+  <div class="status-bar">
+    <span>22:37</span>
+    <div class="right-icons"><span>LTE</span> <span>🔋</span></div>
   </div>
 
-  <main class="main">
-    <!-- CIBLE DU SWAP - Qui tu veux devenir -->
-    <section class="card">
-      <div class="card-title"><span class="icon green">🖼️</span> Cible du swap <small>Qui tu veux devenir</small></div>
-      <p class="card-desc">La photo ou vidéo dont tu veux prendre l'apparence. Ton visage va remplacer le sien.</p>
-      <label class="upload-chap"><input type="file" id="targetFile" accept="image/*,video/*"><span>📁 Choisir cible (photo/vidéo)</span></label>
-      <div id="targetPreview" class="target-preview" style="display:none"><img id="targetImg"><video id="targetVideo" style="display:none" loop muted></video><p id="targetStatus" class="status-text">Analyse...</p></div>
-    </section>
+  <!-- MAIN RESULT - Large (Mark qui fait tes gestes) -->
+  <div class="main-stage">
+    <canvas id="resultCanvas"></canvas>
+    <video id="video" autoplay playsinline muted style="display:none"></video>
+    <div id="placeholderMain" class="placeholder-main"><div class="icon">∞</div><p>Choisis qui tu veux devenir (ex: Mark)</p><small>Ton visage remplacera le sien avec tes gestes</small></div>
+    
+    <!-- Small PIP - TOI en haut à gauche comme sur capture -->
+    <div class="pip-source">
+      <canvas id="pipCanvas"></canvas>
+      <div id="pipPlaceholder" class="pip-placeholder">TOI</div>
+    </div>
 
-    <!-- SOURCE DU SWAP - Comme sur chapcam.com -->
-    <section class="card">
-      <div class="card-title"><span class="icon green">🎞️</span> Source du swap</div>
-      <p class="card-desc">Ta caméra en direct, ou une vidéo que tu importes.</p>
-      <div class="source-tabs">
-        <button id="tabCamera" class="tab active"><span>📷</span> Caméra</button>
-        <button id="tabVideo" class="tab"><span>🎞️</span> Vidéo</button>
-      </div>
-      <label class="upload-chap" id="sourceVideoLabel" style="display:none"><input type="file" id="sourceVideoFile" accept="video/*"><span>📁 Importer une vidéo source</span></label>
-    </section>
+    <!-- Comment bubble comme sur capture -->
+    <div class="comment-bubble" id="commentBubble">
+      <div class="comment-line">Réponds au commentaire de</div>
+      <div class="comment-name">KING CHELSEA DLS CIV</div>
+      <div class="comment-text">🔵 [Sticker] Mark quoi ?</div>
+    </div>
 
-    <!-- CAMÉRA RÉELLE - Comme sur chapcam.com -->
-    <section class="card">
-      <div class="card-title"><span class="icon blue">📷</span> Caméra réelle</div>
-      <div class="camera-box">
-        <video id="video" autoplay playsinline muted></video>
-        <canvas id="overlay"></canvas>
-        <div id="placeholderReal" class="camera-placeholder"><div class="cam-icon">📷</div><p>Caméra inactive</p></div>
-        <div class="cam-overlay"><span id="realStatus" class="live-badge">INACTIF</span></div>
-      </div>
-    </section>
+    <!-- ChapCam watermark comme sur capture -->
+    <div class="watermark">
+      <div class="wm-text">chapcam.com</div>
+      <div class="wm-logo">∞</div>
+    </div>
 
-    <!-- CAMÉRA CHAPCAM - Résultat swap -->
-    <section class="card highlight">
-      <div class="card-title"><span class="icon green">⚡</span> Caméra ChapCam <span class="expand">⤢</span></div>
-      <div class="camera-box chapcam-box">
-        <canvas id="resultCanvas"></canvas>
-        <div id="placeholderChap" class="camera-placeholder"><div class="cam-icon">⚡</div><p>En attente de cible + source</p><small>Ton visage remplacera la cible ici</small></div>
-        <div class="cam-overlay">
-          <span id="chapStatus" class="live-badge green">CHAPCAM</span>
-          <div class="gesture-dots">
-            <span id="dotMouth">👄</span>
-            <span id="dotEyes">👁️</span>
-            <span id="dotSmile">😊</span>
-          </div>
+    <!-- Bottom controls comme TikTok -->
+    <div class="bottom-controls">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div><div class="progress-dot" id="progressDot"></div></div>
+      <div class="controls-row">
+        <button class="close-btn" id="btnClose">✕</button>
+        <div class="right-controls">
+          <button class="play-btn" id="btnPlay">▶</button>
+          <span class="speed">1×</span>
         </div>
-        <button class="telegram-btn">✈️</button>
       </div>
-      <div class="controls">
-        <button id="btnStart" class="btn-start">▶️ LANCER SWAP COMME CHAPCAM</button>
-        <button id="btnStop" class="btn-stop" style="display:none">⏹️ Arrêter</button>
-      </div>
-      <div class="sliders">
-        <label>Zoom <input type="range" id="zoom" min="0.7" max="1.6" value="1.05" step="0.05"></label>
-        <label>Flou <input type="range" id="feather" min="0" max="25" value="12"></label>
-      </div>
-    </section>
-  </main>
+    </div>
+
+    <!-- Top controls for setup -->
+    <div class="top-setup" id="topSetup">
+      <label class="upload-mark"><input type="file" id="targetFile" accept="image/*,video/*">📸 Devenir qui ?</label>
+      <button id="btnStart" class="start-btn">▶️ LANCER SWAP MARK</button>
+      <button id="btnStop" class="stop-btn" style="display:none">⏹️ Stop</button>
+      <span id="status" class="status-badge">En attente</span>
+    </div>
+  </div>
 </div>
 <script src="app.js"></script>
 </body>
