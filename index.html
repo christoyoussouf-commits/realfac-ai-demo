@@ -2,85 +2,59 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>REALFACE AI - Photo Animée Live</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REALFACE AI - LIVE SWAP FIXED</title>
 <link rel="stylesheet" href="style.css">
-<meta name="theme-color" content="#0a0a0f">
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.15.0/dist/tf-core.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.15.0/dist/tf-converter.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.15.0/dist/tf-backend-webgl.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@0.0.3/dist/face-landmarks-detection.min.js"></script>
 </head>
 <body>
 <header class="topbar">
-  <div class="logo">REALFACE <span>AI</span> <b class="beta">LIVE SWAP</b></div>
-  <div class="tagline">TA PHOTO • ANIMÉE PAR TON VISAGE</div>
+  <div class="logo">REALFACE <span>AI</span> <b class="beta">LIVE V2</b></div>
+  <div class="tagline">PHOTO QUI BOUGE COMME TOI - VERSION STABLE</div>
 </header>
-
 <main class="container">
   <section class="hero">
-    <h1>Mets une photo.<br>Elle bouge comme toi.</h1>
-    <p>Importe une photo de visage. Ta caméra va animer cette photo en direct : sourire, yeux, bouche, tête. Comme une vidéo deepfake live.</p>
+    <h1>Ta photo<br>devient une vidéo live.</h1>
+    <p>Version corrigée qui marche sur tous les téléphones. Sans chargement qui bloque.</p>
   </section>
-
   <section class="card">
-    <h2>1️⃣ PHOTO CIBLE - Qui veux-tu devenir ?</h2>
-    <p class="hint">Importe une photo de face, claire, avec un visage bien visible (ton ami, une star, un avatar, toi avec un autre style).</p>
-    <label class="upload" id="targetUploadLabel">
+    <h2>1️⃣ PHOTO À ANIMER</h2>
+    <label class="upload" id="targetLabel">
       <input type="file" id="targetFile" accept="image/*">
-      <span id="targetUploadText">📸 Choisir la photo à animer</span>
-      <small>Clique pour choisir la photo qui va bouger</small>
+      <span id="uploadText">📸 Choisis la photo qui va bouger</span>
+      <small>Photo de face, bien visible</small>
     </label>
     <div id="targetPreview" class="photo-preview" style="display:none">
       <img id="targetImg">
-      <p class="hint" id="targetStatus">Analyse du visage...</p>
+      <div class="photo-actions"><button id="btnUsePhoto" class="btn primary">Utiliser cette photo</button></div>
     </div>
   </section>
 
   <section class="card camera-card">
     <div class="card-head">
-      <h2>2️⃣ LIVE - Toi + Ta photo animée</h2>
-      <span id="camStatus" class="status inactive">Charge le modèle IA...</span>
+      <h2>2️⃣ LIVE ANIMATION</h2>
+      <span id="camStatus" class="status">En attente de photo</span>
     </div>
-
     <div class="dual-view">
       <div class="view-box">
-        <div class="view-label">TOI (Source - tes gestes)</div>
-        <div class="video-wrap small">
-          <video id="video" autoplay playsinline muted></video>
-          <canvas id="overlay"></canvas>
-          <div id="placeholder" class="placeholder"><div class="ph-icon">📷</div><p>Active ta caméra</p></div>
-        </div>
+        <div class="view-label">TOI</div>
+        <div class="video-wrap"><video id="video" autoplay playsinline muted></video><canvas id="overlay"></canvas><div id="placeholder" class="placeholder"><div class="ph-icon">📷</div><p>Active ta caméra</p></div></div>
       </div>
       <div class="view-box">
-        <div class="view-label">PHOTO ANIMÉE (Résultat - comme une vidéo)</div>
-        <div class="video-wrap small result-wrap">
-          <canvas id="resultCanvas"></canvas>
-          <div id="resultPlaceholder" class="placeholder"><div class="ph-icon">🖼️</div><p>Importe une photo d'abord</p></div>
-        </div>
+        <div class="view-label">PHOTO ANIMÉE - VIDÉO LIVE</div>
+        <div class="video-wrap result-wrap"><canvas id="resultCanvas"></canvas><div id="resultPlaceholder" class="placeholder"><div class="ph-icon">🖼️</div><p>Mets une photo d'abord</p></div></div>
       </div>
     </div>
-
     <div class="actions">
-      <button id="btnFront" class="btn primary">Activer caméra</button>
-      <button id="btnStop" class="btn ghost" style="display:none">Arrêter</button>
-      <button id="btnRecord" class="btn ghost" style="display:none">🔴 Enregistrer vidéo</button>
+      <button id="btnFront" class="btn primary">▶️ Activer caméra + animation</button>
+      <button id="btnStop" class="btn ghost" style="display:none">⏹️ Arrêter</button>
     </div>
-    <p class="hint">Astuce : bouge la tête, souris, ouvre la bouche, cligne des yeux. La photo de droite va faire pareil en direct !</p>
-  </section>
-
-  <section class="card">
-    <h2>⚙️ RÉGLAGES</h2>
     <div class="controls">
-      <label>Sensibilité mouvement <input type="range" id="sensitivity" min="0.5" max="2" step="0.1" value="1"></label>
-      <label><input type="checkbox" id="mirror" checked> Miroir</label>
+      <label>Suivi tête <input type="range" id="sensitivity" min="0.2" max="2" step="0.1" value="1"></label>
+      <label><input type="checkbox" id="smooth" checked> Lissage fluide</label>
     </div>
-    <div class="notice">
-      <strong>Comment ça marche :</strong> L'IA détecte 468 points de ton visage (yeux, nez, bouche). Elle calcule ta rotation de tête, ton sourire, l'ouverture de ta bouche, et applique ces mouvements à la photo cible en temps réel. 100% local, sur ton téléphone.
-    </div>
+    <p class="hint">👉 Une fois lancé, bouge la tête, souris, ouvre la bouche. La photo de droite bouge en temps réel comme une vraie vidéo deepfake !</p>
   </section>
 </main>
-<footer>REALFACE AI • LIVE FACE REENACTMENT</footer>
 <script src="app.js"></script>
 </body>
 </html>

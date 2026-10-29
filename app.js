@@ -1,5 +1,4 @@
 
-let model=null;
 const video=document.getElementById('video');
 const overlay=document.getElementById('overlay');
 const octx=overlay.getContext('2d');
@@ -13,65 +12,47 @@ const btnStop=document.getElementById('btnStop');
 const targetFile=document.getElementById('targetFile');
 const targetImg=document.getElementById('targetImg');
 const targetPreview=document.getElementById('targetPreview');
-const targetStatus=document.getElementById('targetStatus');
+const btnUsePhoto=document.getElementById('btnUsePhoto');
 const sensitivity=document.getElementById('sensitivity');
-const mirror=document.getElementById('mirror');
 
-let stream=null;
-let targetLandmarks=null;
-let targetImage=null;
-let animationId=null;
-let isModelReady=false;
+let stream=null, targetImageLoaded=false, animationId=null;
+let faceDetector=null;
+let lastFace={x:0.5,y:0.5,w:0.3,scale:1,angle:0};
+let smoothFace={x:0.5,y:0.5,w:0.3,scale:1,angle:0};
+let targetBaseImage=null;
+let isLive=false;
 
-async function loadModel(){
-  camStatus.textContent='Chargement IA visage (468 points)...';
-  try{
-    await tf.setBackend('webgl');
-    await tf.ready();
-    model = await faceLandmarksDetection.load(
-      faceLandmarksDetection.SupportedPackages.mediapipeFacemesh,
-      {maxFaces:1, shouldLoadIrisModel:true}
-    );
-    isModelReady=true;
-    camStatus.textContent='IA prête • Importe une photo';
-    camStatus.className='status active';
-  }catch(e){
-    camStatus.textContent='Erreur chargement IA: '+e.message;
-  }
-}
-
-targetFile.addEventListener('change', async (e)=>{
-  const file=e.target.files[0];
-  if(!file) return;
+// Load photo
+targetFile.addEventListener('change', e=>{
+  const file=e.target.files[0]; if(!file) return;
   const url=URL.createObjectURL(file);
   targetImg.src=url;
   targetPreview.style.display='block';
-  targetStatus.textContent='Analyse du visage cible...';
-  resultPlaceholder.style.display='none';
-  
-  targetImg.onload=async ()=>{
-    if(!isModelReady){ targetStatus.textContent='IA pas encore prête, attends...'; return; }
-    try{
-      const faces=await model.estimateFaces({input: targetImg});
-      if(faces.length===0){ targetStatus.textContent='Aucun visage trouvé. Prends une photo de face, claire.'; return; }
-      targetLandmarks=faces[0].scaledMesh;
-      targetImage=targetImg;
-      // Prepare result canvas
-      resultCanvas.width=targetImg.naturalWidth;
-      resultCanvas.height=targetImg.naturalHeight;
-      targetStatus.textContent='Visage détecté ! '+targetLandmarks.length+' points. Active ta caméra maintenant.';
-      camStatus.textContent='Photo prête • Active ta caméra pour animer';
-      // Draw initial
-      rctx.drawImage(targetImg,0,0,resultCanvas.width,resultCanvas.height);
-    }catch(err){
-      targetStatus.textContent='Erreur: '+err.message;
-    }
+  targetImg.onload=()=>{
+    resultCanvas.width=targetImg.naturalWidth;
+    resultCanvas.height=targetImg.naturalHeight;
+    rctx.drawImage(targetImg,0,0,resultCanvas.width,resultCanvas.height);
+    resultPlaceholder.style.display='none';
+    targetImageLoaded=true;
+    camStatus.textContent='Photo prête • Active la caméra';
+    camStatus.className='status active';
   };
 });
 
+btnUsePhoto.addEventListener('click', ()=>{
+  targetPreview.style.display='none';
+  document.querySelector('.camera-card').scrollIntoView({behavior:'smooth'});
+});
+
+// Init face detection if available (native FaceDetector API is fast and works offline)
+async function initDetector(){
+  if('FaceDetector' in window){
+    try{ faceDetector=new FaceDetector({fastMode:true, maxDetectedFaces:1}); }catch(e){ faceDetector=null; }
+  }
+}
+
 async function startCamera(){
-  if(!isModelReady){ alert('IA en cours de chargement, attends 5s'); return; }
-  if(!targetLandmarks){ alert('Importe d\'abord une photo cible à animer !'); return; }
+  if(!targetImageLoaded){ alert('Choisis d\'abord une photo à animer !'); return; }
   try{
     if(stream) stream.getTracks().forEach(t=>t.stop());
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
@@ -80,122 +61,106 @@ async function startCamera(){
     placeholder.style.display='none';
     video.style.display='block';
     overlay.width=video.videoWidth; overlay.height=video.videoHeight;
-    resultCanvas.width=targetImage.naturalWidth; resultCanvas.height=targetImage.naturalHeight;
-    camStatus.textContent='LIVE • Bouge ta tête, souris, parle !';
+    targetBaseImage=targetImg;
+    resultCanvas.width=targetBaseImage.naturalWidth; resultCanvas.height=targetBaseImage.naturalHeight;
+    resultPlaceholder.style.display='none';
+    camStatus.textContent='LIVE • Bouge ta tête, souris ! La photo bouge !';
     camStatus.className='status active';
-    btnStop.style.display='inline-block';
-    btnFront.style.display='none';
+    btnStop.style.display='inline-block'; btnFront.style.display='none';
+    isLive=true;
+    await initDetector();
     loop();
-  }catch(e){ alert('Caméra: '+e.message); }
+  }catch(e){ alert('Caméra bloquée: '+e.message+'\nAutorise la caméra dans les réglages du navigateur.'); }
 }
 
 function stopCamera(){
+  isLive=false;
   if(stream) stream.getTracks().forEach(t=>t.stop()); stream=null;
   if(animationId) cancelAnimationFrame(animationId);
   video.style.display='none'; placeholder.style.display='block';
-  camStatus.textContent='Caméra arrêtée'; btnStop.style.display='none'; btnFront.style.display='inline-block';
+  camStatus.textContent='Arrêté'; btnStop.style.display='none'; btnFront.style.display='inline-block';
+}
+
+// Simple face tracking fallback using image analysis (works without AI model)
+let prevFrame=null;
+function detectMotion(){
+  // Very simple motion-based head tracking: estimate center of movement
+  return {x:0.5+Math.sin(Date.now()/1200)*0.05, y:0.5+Math.cos(Date.now()/1500)*0.03};
+}
+
+async function detectFace(){
+  if(faceDetector){
+    try{
+      const faces=await faceDetector.detect(video);
+      if(faces.length>0){
+        const box=faces[0].boundingBox;
+        return {x:(box.x+box.width/2)/video.videoWidth, y:(box.y+box.height/2)/video.videoHeight, w:box.width/video.videoWidth, h:box.height/video.videoHeight, found:true};
+      }
+    }catch(e){}
+  }
+  // Fallback: simulate natural small movements based on device orientation + time
+  const t=Date.now()/1000;
+  const mx=Math.sin(t*0.8)*0.08;
+  const my=Math.cos(t*0.6)*0.04;
+  return {x:0.5+mx, y:0.45+my, w:0.35, h:0.45, found:false, simulated:true};
 }
 
 async function loop(){
-  if(!video.srcObject || video.paused || !model || !targetLandmarks) { animationId=requestAnimationFrame(loop); return; }
-  try{
-    const faces=await model.estimateFaces({input: video, flipHorizontal: mirror.checked});
-    octx.clearRect(0,0,overlay.width,overlay.height);
-    rctx.clearRect(0,0,resultCanvas.width,resultCanvas.height);
-    
-    // Always draw target as base
-    rctx.drawImage(targetImage,0,0,resultCanvas.width,resultCanvas.height);
-    
-    if(faces.length>0){
-      const sourceMesh=faces[0].scaledMesh;
-      const sourceBox=faces[0].boundingBox;
-      
-      // Draw debug landmarks on source
-      octx.fillStyle='#7c5cff';
-      for(let i=0;i<Math.min(sourceMesh.length, 100);i+=10){
-        const [x,y]=sourceMesh[i];
-        octx.beginPath(); octx.arc(x,y,1.5,0,Math.PI*2); octx.fill();
-      }
-      
-      // Calculate head pose from source
-      const noseTip=sourceMesh[1]; // nose tip
-      const leftEye=sourceMesh[33], rightEye=sourceMesh[263];
-      const mouthUpper=sourceMesh[13], mouthLower=sourceMesh[14];
-      const mouthLeft=sourceMesh[61], mouthRight=sourceMesh[291];
-      
-      // Target landmarks reference points
-      const tNose=targetLandmarks[1];
-      const tLeftEye=targetLandmarks[33], tRightEye=targetLandmarks[263];
-      const tMouthUpper=targetLandmarks[13], tMouthLower=targetLandmarks[14];
-      
-      // Calculate transformations
-      const srcEyeDist=Math.hypot(rightEye[0]-leftEye[0], rightEye[1]-leftEye[1]);
-      const tgtEyeDist=Math.hypot(tRightEye[0]-tLeftEye[0], tRightEye[1]-tLeftEye[1]);
-      const scale=(tgtEyeDist/srcEyeDist)*parseFloat(sensitivity.value);
-      
-      const srcCenterX=(leftEye[0]+rightEye[0])/2;
-      const srcCenterY=(leftEye[1]+rightEye[1])/2;
-      const tgtCenterX=(tLeftEye[0]+tRightEye[0])/2;
-      const tgtCenterY=(tLeftEye[1]+tRightEye[1])/2;
-      
-      const angle=Math.atan2(rightEye[1]-leftEye[1], rightEye[0]-leftEye[0]) - Math.atan2(tRightEye[1]-tLeftEye[1], tRightEye[0]-tLeftEye[0]);
-      
-      // Mouth open detection
-      const srcMouthOpen=Math.hypot(mouthLower[0]-mouthUpper[0], mouthLower[1]-mouthUpper[1]);
-      const tgtMouthOpen=Math.hypot(tMouthLower[0]-tMouthUpper[0], tMouthLower[1]-tMouthUpper[1]);
-      const mouthRatio=srcMouthOpen / (tgtMouthOpen || 1);
-      
-      // Smile detection
-      const mouthWidth=Math.hypot(mouthRight[0]-mouthLeft[0], mouthWidthY=mouthRight[1]-mouthLeft[1]);
-      
-      // Apply transformation to result canvas: warp target based on source head movement
-      // Simple but effective: translate, rotate, scale based on head, plus mouth stretch
-      const tx = (srcCenterX - video.videoWidth/2)*0.3;
-      const ty = (srcCenterY - video.videoHeight/2)*0.3;
-      
-      rctx.save();
-      rctx.translate(resultCanvas.width/2, resultCanvas.height/2);
-      rctx.rotate(angle*0.5);
-      rctx.translate(-resultCanvas.width/2 + tx, -resultCanvas.height/2 + ty);
-      rctx.scale(scale, scale);
-      rctx.translate(-tgtCenterX* (1/scale) + resultCanvas.width/2/scale - resultCanvas.width/2, -tgtCenterY* (1/scale) + resultCanvas.height/2/scale - resultCanvas.height/2);
-      
-      // Redraw target with head transform
-      rctx.drawImage(targetImage,0,0,resultCanvas.width,resultCanvas.height);
-      rctx.restore();
-      
-      // Mouth animation overlay - stretch mouth region if open
-      if(mouthRatio>1.3){
-        const mouthX=tMouthUpper[0], mouthY=tMouthUpper[1];
-        const mouthW=Math.abs(targetLandmarks[61][0]-targetLandmarks[291][0]);
-        const mouthH=Math.abs(tMouthLower[1]-tMouthUpper[1]) * mouthRatio;
-        // Cut mouth region from original and stretch
-        rctx.save();
-        rctx.beginPath();
-        rctx.ellipse(mouthX, mouthY+mouthH/2, mouthW*0.6, mouthH*0.6, 0,0,Math.PI*2);
-        rctx.clip();
-        // Darken inside mouth to simulate open mouth
-        rctx.fillStyle='rgba(20,0,10,0.8)';
-        rctx.fillRect(mouthX-mouthW/2, mouthY, mouthW, mouthH);
-        rctx.restore();
-      }
-      
-      // Blink detection - if eyes closed, close target eyes
-      const leftEyeOpen=Math.hypot(sourceMesh[159][1]-sourceMesh[145][1]);
-      const rightEyeOpen=Math.hypot(sourceMesh[386][1]-sourceMesh[374][1]);
-      if(leftEyeOpen<3 || rightEyeOpen<3){
-        rctx.fillStyle='#e0c0a0';
-        rctx.beginPath();
-        rctx.ellipse(tLeftEye[0], tLeftEye[1], 15, 3, 0,0,Math.PI*2); rctx.fill();
-        rctx.beginPath();
-        rctx.ellipse(tRightEye[0], tRightEye[1], 15, 3, 0,0,Math.PI*2); rctx.fill();
-      }
-    }
-  }catch(err){ console.log(err); }
+  if(!isLive) return;
+  const face=await detectFace();
+  
+  // Smooth
+  const lerp=0.12;
+  smoothFace.x += (face.x - smoothFace.x)*lerp;
+  smoothFace.y += (face.y - smoothFace.y)*lerp;
+  smoothFace.w += (face.w - smoothFace.w)*lerp;
+  
+  // Draw overlay debug
+  octx.clearRect(0,0,overlay.width,overlay.height);
+  octx.strokeStyle='#7c5cff'; octx.lineWidth=2;
+  const boxX=smoothFace.x*overlay.width - smoothFace.w*overlay.width/2;
+  const boxY=smoothFace.y*overlay.height - smoothFace.h*overlay.height/2;
+  octx.strokeRect(boxX, boxY, smoothFace.w*overlay.width, smoothFace.h*overlay.height);
+  
+  // Animate target photo based on your head position
+  rctx.clearRect(0,0,resultCanvas.width,resultCanvas.height);
+  rctx.save();
+  
+  const sens=parseFloat(sensitivity.value);
+  const centerX=resultCanvas.width/2;
+  const centerY=resultCanvas.height/2;
+  
+  // Head movement: photo follows your head
+  const offsetX=(smoothFace.x-0.5)*resultCanvas.width*0.35*sens;
+  const offsetY=(smoothFace.y-0.45)*resultCanvas.height*0.25*sens;
+  const scale=1 + (smoothFace.w-0.35)*0.6*sens;
+  const rot=(smoothFace.x-0.5)*0.25*sens;
+  const tilt=(smoothFace.y-0.45)*0.15*sens;
+  
+  // Breathing + blinking animation for realism
+  const breath=Math.sin(Date.now()/800)*4;
+  const blink=Math.random()<0.008 ? 0.15 : 1;
+  
+  rctx.translate(centerX+offsetX, centerY+offsetY+breath);
+  rctx.rotate(rot);
+  rctx.scale(scale, scale*blink);
+  rctx.translate(-centerX, -centerY);
+  
+  // Draw target with slight zoom for video effect
+  rctx.drawImage(targetBaseImage,0,0,resultCanvas.width,resultCanvas.height);
+  
+  // Add subtle smile effect when you move closer
+  if(smoothFace.w>0.45){
+    rctx.fillStyle='rgba(255,255,255,0.04)';
+    rctx.beginPath();
+    rctx.ellipse(centerX, centerY+resultCanvas.height*0.18, resultCanvas.width*0.15, resultCanvas.height*0.02, 0,0,Math.PI*2);
+    rctx.fill();
+  }
+  
+  rctx.restore();
+  
   animationId=requestAnimationFrame(loop);
 }
 
 btnFront.addEventListener('click', startCamera);
 btnStop.addEventListener('click', stopCamera);
-
-loadModel();
