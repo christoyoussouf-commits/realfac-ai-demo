@@ -2,20 +2,65 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>REALFACE Real IA - Vrai ChapCam</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>REALFACE iPhone 17 - Noir vers Mark Real IA</title>
 <link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
 </head>
 <body>
-<div class="app">
-  <header><div class="logo">REALFACE <span>Real IA</span> <small>Comme ChapCam.com</small></div><div class="badge">VRAI inswapper_128</div></header>
-  <div class="warning">⚠️ VRAIE IA ChapCam: Utilise vrai modele inswapper_128 + GFPGAN comme ChapCam.com et Deep-Live-Cam. Transforme vraiment noir vers Mark, pas collage.</div>
-  <main>
-    <div class="card"><h2>Avatar cible</h2><label class="up"><input type="file" id="targetFile" accept="image/*"><span>Choisir Mark</span></label><div id="targetPreview" class="prev" style="display:none"><img id="targetImg"><p id="targetInfo">Analyse...</p></div></div>
-    <div class="card"><h2>Modeles IA</h2><button id="btnLoadModels" class="btn">Charger modeles Real IA</button><div id="modelProgress" style="display:none"><div class="bar"><div id="barFill" style="width:0%"></div></div><span id="progressText">0%</span></div></div>
-    <div class="dual"><div class="cam"><h3>Camera reelle</h3><div class="box"><video id="video" autoplay playsinline muted></video><div id="phReal" class="ph">Eteinte</div></div></div><div class="cam highlight"><h3>Camera ChapCam Real IA</h3><div class="box"><canvas id="resultCanvas"></canvas><div id="phResult" class="ph">En attente</div></div></div></div>
-    <div class="actions"><button id="btnStart" class="big">TRANSFORMER VRAIMENT - Real IA</button><button id="btnStop" class="big ghost" style="display:none">Stop</button></div>
-  </main>
+<div class="iphone-app">
+  <div class="notch"></div>
+  <header>
+    <div class="logo">REALFACE <span>iPhone 17</span> <div class="badge">Real IA • iOS</div></div>
+    <div class="device">📱 iPhone 17 optimisé</div>
+  </header>
+
+  <div class="stage" id="stage">
+    <div class="result-wrap">
+      <canvas id="resultCanvas"></canvas>
+      <video id="targetVideo" loop muted playsinline style="display:none"></video>
+      <!-- PIP like TikTok video - small top-left -->
+      <div class="pip" id="pip">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="pipCanvas"></canvas>
+        <div class="pip-label">TOI - Noir</div>
+        <div id="phPip" class="ph-pip">📷<br>TOI</div>
+      </div>
+      <div id="phResult" class="ph-result">
+        <div>⚡</div>
+        <h2>Choisis Mark</h2>
+        <p>Comme ta vidéo TikTok noir → Mark</p>
+        <small>Optimisé iPhone 17</small>
+      </div>
+      <div class="watermark">chapcam.com ∞</div>
+      <div class="live-badge" id="liveBadge">Real IA</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <label class="upload"><input type="file" id="targetFile" accept="image/*"><span>📸 Choisir Mark (photo de face)</span></label>
+    <div id="targetPreview" class="preview" style="display:none"><img id="targetImg"><span>✅ Mark prêt</span></div>
+    
+    <button id="btnLoad" class="btn-load">📥 Charger IA Real (iPhone 17)</button>
+    <div id="progress" class="progress" style="display:none"><div class="bar"><div id="fill"></div></div><span id="pct">0%</span></div>
+    
+    <button id="btnStart" class="btn-go">▶️ TRANSFORMER NOIR → MARK - iPhone 17</button>
+    <button id="btnStop" class="btn-stop" style="display:none">⏹️ Stop</button>
+    
+    <div class="sliders">
+      <label>Qualité Real IA <input type="range" id="quality" min="0" max="100" value="85"></label>
+      <label>Lumière Mark <input type="range" id="light" min="0.8" max="1.5" value="1.15" step="0.05"></label>
+    </div>
+
+    <div class="info">
+      <b>📱 iPhone 17 - Comment ça marche vraiment :</b>
+      <p>1. Petit écran haut-gauche = TOI noir en direct (comme ta vidéo)</p>
+      <p>2. Grand écran = MARK blanc qui fait tes gestes exactement</p>
+      <p>3. Vraie IA inswapper optimisée pour iPhone 17 (A19 Pro) - pas juste collage</p>
+      <p>4. Tes mains levées → Mark lève les mêmes mains comme dans ta vidéo TikTok</p>
+    </div>
+  </div>
 </div>
 <script src="app.js"></script>
 </body>
