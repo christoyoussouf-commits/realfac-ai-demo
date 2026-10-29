@@ -1,228 +1,201 @@
 
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d', {willReadFrequently:true});
-const placeholder = document.getElementById('placeholder');
-const camStatus = document.getElementById('camStatus');
-const videoWrap = document.getElementById('videoWrap');
-const btnFront = document.getElementById('btnFront');
-const btnBack = document.getElementById('btnBack');
-const btnStop = document.getElementById('btnStop');
-const btnCapture = document.getElementById('btnCapture');
-const looks = document.querySelectorAll('.look');
-const currentStyleName = document.getElementById('currentStyleName');
-const capturedArea = document.getElementById('capturedArea');
-const capturedImg = document.getElementById('capturedImg');
-const aiResult = document.getElementById('aiResult');
-const aiImg = document.getElementById('aiImg');
-const aiLoading = document.getElementById('aiLoading');
-const btnGenerate = document.getElementById('btnGenerate');
-const btnRetake = document.getElementById('btnRetake');
-const btnDownload = document.getElementById('btnDownload');
-const hfTokenInput = document.getElementById('hfToken');
-const btnSaveToken = document.getElementById('btnSaveToken');
-const loadingStyle = document.getElementById('loadingStyle');
+let model=null;
+const video=document.getElementById('video');
+const overlay=document.getElementById('overlay');
+const octx=overlay.getContext('2d');
+const resultCanvas=document.getElementById('resultCanvas');
+const rctx=resultCanvas.getContext('2d');
+const placeholder=document.getElementById('placeholder');
+const resultPlaceholder=document.getElementById('resultPlaceholder');
+const camStatus=document.getElementById('camStatus');
+const btnFront=document.getElementById('btnFront');
+const btnStop=document.getElementById('btnStop');
+const targetFile=document.getElementById('targetFile');
+const targetImg=document.getElementById('targetImg');
+const targetPreview=document.getElementById('targetPreview');
+const targetStatus=document.getElementById('targetStatus');
+const sensitivity=document.getElementById('sensitivity');
+const mirror=document.getElementById('mirror');
 
-let stream=null, currentFilter='realistic', currentPrompt='', animationId=null, capturedBlob=null;
+let stream=null;
+let targetLandmarks=null;
+let targetImage=null;
+let animationId=null;
+let isModelReady=false;
 
-const names={
-  realistic:'RÉEL CLAIR • IA HD Nette',
-  natural:'Naturel • Lumière douce pro',
-  anime:'Anime • Clair & Net Ghibli',
-  avatar3d:'Avatar 3D • Pixar Clair Réaliste'
-};
-
-// Sharpen kernel for clear image
-function sharpen(imageData){
-  const w=imageData.width, h=imageData.height;
-  const src=imageData.data.slice();
-  const dst=imageData.data;
-  const kernel=[0,-1,0,-1,5,-1,0,-1,0];
-  for(let y=1;y<h-1;y++){
-    for(let x=1;x<w-1;x++){
-      let r=0,g=0,b=0;
-      let k=0;
-      for(let ky=-1;ky<=1;ky++){
-        for(let kx=-1;kx<=1;kx++){
-          const idx=((y+ky)*w + (x+kx))*4;
-          const kv=kernel[k++];
-          r+=src[idx]*kv; g+=src[idx+1]*kv; b+=src[idx+2]*kv;
-        }
-      }
-      const i=(y*w+x)*4;
-      dst[i]=Math.min(255,Math.max(0,r));
-      dst[i+1]=Math.min(255,Math.max(0,g));
-      dst[i+2]=Math.min(255,Math.max(0,b));
-    }
+async function loadModel(){
+  camStatus.textContent='Chargement IA visage (468 points)...';
+  try{
+    await tf.setBackend('webgl');
+    await tf.ready();
+    model = await faceLandmarksDetection.load(
+      faceLandmarksDetection.SupportedPackages.mediapipeFacemesh,
+      {maxFaces:1, shouldLoadIrisModel:true}
+    );
+    isModelReady=true;
+    camStatus.textContent='IA prête • Importe une photo';
+    camStatus.className='status active';
+  }catch(e){
+    camStatus.textContent='Erreur chargement IA: '+e.message;
   }
-  return imageData;
 }
 
-function applyClearFilter(imageData, type){
-  const d=imageData.data;
-  if(type==='realistic'){
-    // IA CLAIRE RÉELLE : netteté + contraste doux + balance des blancs parfaite
-    for(let i=0;i<d.length;i+=4){
-      let r=d[i],g=d[i+1],b=d[i+2];
-      // Auto white balance + exposure
-      r=r*1.08+8; g=g*1.05+6; b=b*1.02+4;
-      // Légère saturation pro
-      const avg=(r+g+b)/3;
-      r=avg+(r-avg)*1.15; g=avg+(g-avg)*1.12; b=avg+(b-avg)*1.1;
-      d[i]=Math.min(255,r); d[i+1]=Math.min(255,g); d[i+2]=Math.min(255,b);
+targetFile.addEventListener('change', async (e)=>{
+  const file=e.target.files[0];
+  if(!file) return;
+  const url=URL.createObjectURL(file);
+  targetImg.src=url;
+  targetPreview.style.display='block';
+  targetStatus.textContent='Analyse du visage cible...';
+  resultPlaceholder.style.display='none';
+  
+  targetImg.onload=async ()=>{
+    if(!isModelReady){ targetStatus.textContent='IA pas encore prête, attends...'; return; }
+    try{
+      const faces=await model.estimateFaces({input: targetImg});
+      if(faces.length===0){ targetStatus.textContent='Aucun visage trouvé. Prends une photo de face, claire.'; return; }
+      targetLandmarks=faces[0].scaledMesh;
+      targetImage=targetImg;
+      // Prepare result canvas
+      resultCanvas.width=targetImg.naturalWidth;
+      resultCanvas.height=targetImg.naturalHeight;
+      targetStatus.textContent='Visage détecté ! '+targetLandmarks.length+' points. Active ta caméra maintenant.';
+      camStatus.textContent='Photo prête • Active ta caméra pour animer';
+      // Draw initial
+      rctx.drawImage(targetImg,0,0,resultCanvas.width,resultCanvas.height);
+    }catch(err){
+      targetStatus.textContent='Erreur: '+err.message;
     }
-    imageData=sharpen(imageData);
-  } else if(type==='natural'){
-    for(let i=0;i<d.length;i+=4){
-      let r=d[i]*1.12+18, g=d[i+1]*1.08+12, b=d[i+2]*0.92+2;
-      d[i]=Math.min(255,r); d[i+1]=Math.min(255,g); d[i+2]=Math.min(255,b);
-    }
-  } else if(type==='anime'){
-    for(let i=0;i<d.length;i+=4){
-      let r=d[i],g=d[i+1],b=d[i+2];
-      const avg=(r+g+b)/3;
-      r=avg+(r-avg)*1.4; g=avg+(g-avg)*1.4; b=avg+(b-avg)*1.4;
-      // Clear anime: keep details but enhance
-      r=Math.min(255,r*1.1+10); g=Math.min(255,g*0.98+5); b=Math.min(255,b*0.95+15);
-      d[i]=r; d[i+1]=g; d[i+2]=b;
-    }
-    imageData=sharpen(imageData);
-  } else if(type==='avatar3d'){
-    for(let i=0;i<d.length;i+=4){
-      let r=d[i],g=d[i+1],b=d[i+2];
-      // Pixar clear: bright, smooth skin
-      r=r*1.15+15; g=g*1.05+10; b=b*1.08+12;
-      // Reduce noise for 3D look
-      const avg=(r+g+b)/3;
-      if(avg<60){ r*=0.9; g*=0.9; b*=0.9; }
-      d[i]=Math.min(255,r); d[i+1]=Math.min(255,g); d[i+2]=Math.min(255,b);
-    }
-    imageData=sharpen(imageData);
-  }
-  return imageData;
-}
-
-function processFrame(source){
-  if(!source) return;
-  const vw=source.videoWidth||source.width||1280, vh=source.videoHeight||source.height||720;
-  if(canvas.width!==vw||canvas.height!==vh){canvas.width=vw; canvas.height=vh;}
-  ctx.drawImage(source,0,0,vw,vh);
-  let frame=ctx.getImageData(0,0,vw,vh);
-  frame=applyClearFilter(frame, currentFilter);
-  ctx.putImageData(frame,0,0);
-}
-
-function loop(){ if(video.srcObject&&!video.paused){processFrame(video);} animationId=requestAnimationFrame(loop); }
-function startLoop(){ if(animationId) cancelAnimationFrame(animationId); loop(); }
-
-looks.forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    looks.forEach(b=>b.classList.remove('active')); btn.classList.add('active');
-    currentFilter=btn.dataset.style; currentPrompt=btn.dataset.prompt;
-    currentStyleName.textContent=names[currentFilter];
-    loadingStyle.textContent=btn.querySelector('strong').textContent;
-  });
+  };
 });
 
-async function startCamera(facing){
+async function startCamera(){
+  if(!isModelReady){ alert('IA en cours de chargement, attends 5s'); return; }
+  if(!targetLandmarks){ alert('Importe d\'abord une photo cible à animer !'); return; }
   try{
     if(stream) stream.getTracks().forEach(t=>t.stop());
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1920},height:{ideal:1080}},audio:false});
-    video.srcObject=stream; await video.play();
-    placeholder.style.display='none'; video.style.display='none'; canvas.style.display='block';
-    camStatus.textContent='IA CLAIRE active • HD • '+names[currentFilter]; camStatus.className='status active';
-    btnStop.style.display='inline-block'; startLoop();
-  }catch(e){alert('Caméra: '+e.message);}
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
+    video.srcObject=stream;
+    await video.play();
+    placeholder.style.display='none';
+    video.style.display='block';
+    overlay.width=video.videoWidth; overlay.height=video.videoHeight;
+    resultCanvas.width=targetImage.naturalWidth; resultCanvas.height=targetImage.naturalHeight;
+    camStatus.textContent='LIVE • Bouge ta tête, souris, parle !';
+    camStatus.className='status active';
+    btnStop.style.display='inline-block';
+    btnFront.style.display='none';
+    loop();
+  }catch(e){ alert('Caméra: '+e.message); }
 }
+
 function stopCamera(){
   if(stream) stream.getTracks().forEach(t=>t.stop()); stream=null;
   if(animationId) cancelAnimationFrame(animationId);
-  video.style.display='none'; canvas.style.display='none'; placeholder.style.display='block';
-  camStatus.textContent='Caméra inactive'; camStatus.className='status inactive'; btnStop.style.display='none';
+  video.style.display='none'; placeholder.style.display='block';
+  camStatus.textContent='Caméra arrêtée'; btnStop.style.display='none'; btnFront.style.display='inline-block';
 }
-btnFront.addEventListener('click',()=>startCamera('user'));
-btnBack.addEventListener('click',()=>startCamera('environment'));
-btnStop.addEventListener('click',stopCamera);
 
-btnCapture.addEventListener('click',()=>{
-  if(canvas.width===0){alert('Active la caméra'); return;}
-  canvas.toBlob(blob=>{
-    capturedBlob=blob;
-    capturedImg.src=URL.createObjectURL(blob);
-    capturedArea.style.display='block';
-    capturedArea.scrollIntoView({behavior:'smooth'});
-  },'image/jpeg',0.98);
-});
-
-btnRetake.addEventListener('click',()=>{capturedArea.style.display='none'; aiResult.style.display='none'; capturedBlob=null;});
-
-btnSaveToken.addEventListener('click',()=>{
-  const t=hfTokenInput.value.trim();
-  if(!t){alert('Colle ton token'); return;}
-  localStorage.setItem('hf_token',t);
-  alert('Token sauvé ! Vraie IA Pixar activée.');
-  hfTokenInput.value='';
-});
-
-if(localStorage.getItem('hf_token')){ hfTokenInput.placeholder='Token IA actif ✓'; }
-
-async function generateAvatar(){
-  if(!capturedBlob){alert('Capture une image'); return;}
-  const token=localStorage.getItem('hf_token');
-  aiLoading.style.display='block'; aiResult.style.display='none';
-  
-  // Si mode réaliste clair : on garde l'image HD claire locale (déjà traitée par IA claire)
-  if(currentFilter==='realistic' || !token){
-    await new Promise(r=>setTimeout(r,800));
-    // Créer version HD claire encore plus nette
-    const tempCanvas=document.createElement('canvas');
-    tempCanvas.width=canvas.width; tempCanvas.height=canvas.height;
-    const tctx=tempCanvas.getContext('2d');
-    tctx.drawImage(canvas,0,0);
-    let imgData=tctx.getImageData(0,0,tempCanvas.width,tempCanvas.height);
-    imgData=applyClearFilter(imgData,'realistic');
-    // Upscale x1.5 pour clarté
-    const upCanvas=document.createElement('canvas');
-    upCanvas.width=tempCanvas.width*1.2; upCanvas.height=tempCanvas.height*1.2;
-    const upCtx=upCanvas.getContext('2d');
-    upCtx.imageSmoothingQuality='high';
-    upCtx.drawImage(tempCanvas,0,0,upCanvas.width,upCanvas.height);
-    tctx.clearRect(0,0,tempCanvas.width,tempCanvas.height);
-    tctx.drawImage(upCanvas,0,0,tempCanvas.width,tempCanvas.height);
-    tctx.putImageData(imgData,0,0);
-    aiImg.src=tempCanvas.toDataURL('image/jpeg',0.98);
-    aiLoading.style.display='none'; aiResult.style.display='block';
-    return;
-  }
-
-  // Vraie IA avec token
+async function loop(){
+  if(!video.srcObject || video.paused || !model || !targetLandmarks) { animationId=requestAnimationFrame(loop); return; }
   try{
-    const formData=new FormData();
-    formData.append('file', capturedBlob, 'face.jpg');
-    // Utiliser modèle face enhancement + style
-    const response=await fetch('https://api-inference.huggingface.co/models/FacehugmanIII/4x_RealisticPortrait', {
-      method:'POST',
-      headers:{'Authorization':'Bearer '+token},
-      body: capturedBlob
-    });
-    if(response.ok){
-      const blob=await response.blob();
-      aiImg.src=URL.createObjectURL(blob);
-    } else {
-      // Fallback local HD
-      aiImg.src=capturedImg.src;
+    const faces=await model.estimateFaces({input: video, flipHorizontal: mirror.checked});
+    octx.clearRect(0,0,overlay.width,overlay.height);
+    rctx.clearRect(0,0,resultCanvas.width,resultCanvas.height);
+    
+    // Always draw target as base
+    rctx.drawImage(targetImage,0,0,resultCanvas.width,resultCanvas.height);
+    
+    if(faces.length>0){
+      const sourceMesh=faces[0].scaledMesh;
+      const sourceBox=faces[0].boundingBox;
+      
+      // Draw debug landmarks on source
+      octx.fillStyle='#7c5cff';
+      for(let i=0;i<Math.min(sourceMesh.length, 100);i+=10){
+        const [x,y]=sourceMesh[i];
+        octx.beginPath(); octx.arc(x,y,1.5,0,Math.PI*2); octx.fill();
+      }
+      
+      // Calculate head pose from source
+      const noseTip=sourceMesh[1]; // nose tip
+      const leftEye=sourceMesh[33], rightEye=sourceMesh[263];
+      const mouthUpper=sourceMesh[13], mouthLower=sourceMesh[14];
+      const mouthLeft=sourceMesh[61], mouthRight=sourceMesh[291];
+      
+      // Target landmarks reference points
+      const tNose=targetLandmarks[1];
+      const tLeftEye=targetLandmarks[33], tRightEye=targetLandmarks[263];
+      const tMouthUpper=targetLandmarks[13], tMouthLower=targetLandmarks[14];
+      
+      // Calculate transformations
+      const srcEyeDist=Math.hypot(rightEye[0]-leftEye[0], rightEye[1]-leftEye[1]);
+      const tgtEyeDist=Math.hypot(tRightEye[0]-tLeftEye[0], tRightEye[1]-tLeftEye[1]);
+      const scale=(tgtEyeDist/srcEyeDist)*parseFloat(sensitivity.value);
+      
+      const srcCenterX=(leftEye[0]+rightEye[0])/2;
+      const srcCenterY=(leftEye[1]+rightEye[1])/2;
+      const tgtCenterX=(tLeftEye[0]+tRightEye[0])/2;
+      const tgtCenterY=(tLeftEye[1]+tRightEye[1])/2;
+      
+      const angle=Math.atan2(rightEye[1]-leftEye[1], rightEye[0]-leftEye[0]) - Math.atan2(tRightEye[1]-tLeftEye[1], tRightEye[0]-tLeftEye[0]);
+      
+      // Mouth open detection
+      const srcMouthOpen=Math.hypot(mouthLower[0]-mouthUpper[0], mouthLower[1]-mouthUpper[1]);
+      const tgtMouthOpen=Math.hypot(tMouthLower[0]-tMouthUpper[0], tMouthLower[1]-tMouthUpper[1]);
+      const mouthRatio=srcMouthOpen / (tgtMouthOpen || 1);
+      
+      // Smile detection
+      const mouthWidth=Math.hypot(mouthRight[0]-mouthLeft[0], mouthWidthY=mouthRight[1]-mouthLeft[1]);
+      
+      // Apply transformation to result canvas: warp target based on source head movement
+      // Simple but effective: translate, rotate, scale based on head, plus mouth stretch
+      const tx = (srcCenterX - video.videoWidth/2)*0.3;
+      const ty = (srcCenterY - video.videoHeight/2)*0.3;
+      
+      rctx.save();
+      rctx.translate(resultCanvas.width/2, resultCanvas.height/2);
+      rctx.rotate(angle*0.5);
+      rctx.translate(-resultCanvas.width/2 + tx, -resultCanvas.height/2 + ty);
+      rctx.scale(scale, scale);
+      rctx.translate(-tgtCenterX* (1/scale) + resultCanvas.width/2/scale - resultCanvas.width/2, -tgtCenterY* (1/scale) + resultCanvas.height/2/scale - resultCanvas.height/2);
+      
+      // Redraw target with head transform
+      rctx.drawImage(targetImage,0,0,resultCanvas.width,resultCanvas.height);
+      rctx.restore();
+      
+      // Mouth animation overlay - stretch mouth region if open
+      if(mouthRatio>1.3){
+        const mouthX=tMouthUpper[0], mouthY=tMouthUpper[1];
+        const mouthW=Math.abs(targetLandmarks[61][0]-targetLandmarks[291][0]);
+        const mouthH=Math.abs(tMouthLower[1]-tMouthUpper[1]) * mouthRatio;
+        // Cut mouth region from original and stretch
+        rctx.save();
+        rctx.beginPath();
+        rctx.ellipse(mouthX, mouthY+mouthH/2, mouthW*0.6, mouthH*0.6, 0,0,Math.PI*2);
+        rctx.clip();
+        // Darken inside mouth to simulate open mouth
+        rctx.fillStyle='rgba(20,0,10,0.8)';
+        rctx.fillRect(mouthX-mouthW/2, mouthY, mouthW, mouthH);
+        rctx.restore();
+      }
+      
+      // Blink detection - if eyes closed, close target eyes
+      const leftEyeOpen=Math.hypot(sourceMesh[159][1]-sourceMesh[145][1]);
+      const rightEyeOpen=Math.hypot(sourceMesh[386][1]-sourceMesh[374][1]);
+      if(leftEyeOpen<3 || rightEyeOpen<3){
+        rctx.fillStyle='#e0c0a0';
+        rctx.beginPath();
+        rctx.ellipse(tLeftEye[0], tLeftEye[1], 15, 3, 0,0,Math.PI*2); rctx.fill();
+        rctx.beginPath();
+        rctx.ellipse(tRightEye[0], tRightEye[1], 15, 3, 0,0,Math.PI*2); rctx.fill();
+      }
     }
-    aiLoading.style.display='none'; aiResult.style.display='block';
-  }catch(e){
-    aiLoading.style.display='none'; aiImg.src=capturedImg.src; aiResult.style.display='block';
-  }
+  }catch(err){ console.log(err); }
+  animationId=requestAnimationFrame(loop);
 }
 
-btnGenerate.addEventListener('click', generateAvatar);
-btnDownload.addEventListener('click',()=>{
-  const a=document.createElement('a'); a.href=aiImg.src||capturedImg.src; a.download='realface-IA-CLAIRE-HD.jpg'; a.click();
-});
+btnFront.addEventListener('click', startCamera);
+btnStop.addEventListener('click', stopCamera);
 
-canvas.style.display='none';
-currentStyleName.textContent=names[currentFilter];
-startLoop();
+loadModel();
