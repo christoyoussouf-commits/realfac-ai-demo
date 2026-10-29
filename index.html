@@ -2,66 +2,116 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>REALFACE - Comme ta capture Mark</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChapCam 5.0 - Live Swap</title>
 <link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 </head>
 <body>
-<div class="tiktok-player">
-  <!-- Top status bar like iPhone -->
-  <div class="status-bar">
-    <span>22:37</span>
-    <div class="right-icons"><span>LTE</span> <span>🔋</span></div>
-  </div>
-
-  <!-- MAIN RESULT - Large (Mark qui fait tes gestes) -->
-  <div class="main-stage">
-    <canvas id="resultCanvas"></canvas>
-    <video id="video" autoplay playsinline muted style="display:none"></video>
-    <div id="placeholderMain" class="placeholder-main"><div class="icon">∞</div><p>Choisis qui tu veux devenir (ex: Mark)</p><small>Ton visage remplacera le sien avec tes gestes</small></div>
-    
-    <!-- Small PIP - TOI en haut à gauche comme sur capture -->
-    <div class="pip-source">
-      <canvas id="pipCanvas"></canvas>
-      <div id="pipPlaceholder" class="pip-placeholder">TOI</div>
+<div class="dashboard">
+  <!-- Left sidebar like ChapCam -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">Chap<span>Cam</span> <small>5.0</small></div>
+    <div class="sidebar-menu">
+      <div class="menu-item active">🎥 Live Swap</div>
+      <div class="menu-item">🖼️ Photo Swap</div>
+      <div class="menu-item">🎬 Vidéo Swap</div>
+      <div class="menu-item">👤 Mes avatars</div>
     </div>
-
-    <!-- Comment bubble comme sur capture -->
-    <div class="comment-bubble" id="commentBubble">
-      <div class="comment-line">Réponds au commentaire de</div>
-      <div class="comment-name">KING CHELSEA DLS CIV</div>
-      <div class="comment-text">🔵 [Sticker] Mark quoi ?</div>
+    <div class="sidebar-stats">
+      <div class="stat"><span>Jetons</span><b>7800 +</b></div>
+      <div class="stat"><span>Points restants</span><b>9050/8400</b><div class="bar"><div style="width:85%"></div></div></div>
+      <div class="stat vip">VIP DÉBOUT <span>ACTIF</span></div>
     </div>
-
-    <!-- ChapCam watermark comme sur capture -->
-    <div class="watermark">
-      <div class="wm-text">chapcam.com</div>
-      <div class="wm-logo">∞</div>
+    <div class="sidebar-bottom">
+      <div class="user">👤 youssouf@gmail.com</div>
+      <button class="btn-disconnect">↩ Déconnexion</button>
     </div>
+  </aside>
 
-    <!-- Bottom controls comme TikTok -->
-    <div class="bottom-controls">
-      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div><div class="progress-dot" id="progressDot"></div></div>
-      <div class="controls-row">
-        <button class="close-btn" id="btnClose">✕</button>
-        <div class="right-controls">
-          <button class="play-btn" id="btnPlay">▶</button>
-          <span class="speed">1×</span>
-        </div>
+  <!-- Main area -->
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>✨ Live Swap <span class="badge">Nouveauté : ChapCam 5.0</span></h1>
+        <p>Transformez votre apparence en temps réel avec l'IA</p>
+      </div>
+      <div class="top-actions">
+        <button class="btn-outline">Mes demandes</button>
+        <button class="btn-orange">Recharger</button>
+        <button class="btn-outline">Ajouter des minutes</button>
+        <span class="points">4992 pts</span>
       </div>
     </div>
 
-    <!-- Top controls for setup -->
-    <div class="top-setup" id="topSetup">
-      <label class="upload-mark"><input type="file" id="targetFile" accept="image/*,video/*">📸 Devenir qui ?</label>
-      <button id="btnStart" class="start-btn">▶️ LANCER SWAP MARK</button>
-      <button id="btnStop" class="stop-btn" style="display:none">⏹️ Stop</button>
-      <span id="status" class="status-badge">En attente</span>
+    <div class="content">
+      <!-- Cible selection -->
+      <div class="card full">
+        <div class="card-title">🎯 Cible du swap - Qui tu veux devenir</div>
+        <div class="avatar-row">
+          <label class="avatar-upload"><input type="file" id="targetFile" accept="image/*,video/*"><span>📁 Choisir avatar (photo/vidéo)</span></label>
+          <div id="avatarPreview" class="avatar-preview" style="display:none"><img id="targetImg"><video id="targetVideo" style="display:none" loop muted></video></div>
+        </div>
+        <div id="avatarSelected" class="avatar-selected" style="display:none">
+          <img id="selectedAvatarImg" src="">
+          <div><b>Avatar sélectionné</b><span id="avatarName">Mon avatar</span></div>
+        </div>
+      </div>
+
+      <!-- Two cameras side by side like screenshot -->
+      <div class="dual-cameras">
+        <div class="cam-card">
+          <div class="cam-header"><span class="icon blue">📷</span> Caméra réelle <span class="live-dot">🔴 Caméra active</span></div>
+          <div class="cam-box" id="realBox">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="realCanvas"></canvas>
+            <div id="placeholderReal" class="cam-placeholder"><div>📷</div><p>Caméra inactive</p><button id="btnReal" class="btn-mini">Activer caméra</button></div>
+            <div class="cam-label">Toi avec ton téléphone</div>
+          </div>
+          <div class="cam-controls"><span>Source: Caméra / Vidéo</span></div>
+        </div>
+
+        <div class="cam-card highlight">
+          <div class="cam-header"><span class="icon green">⚡</span> Caméra ChapCam <span class="fps">30 FPS • 720p</span> <span class="expand">⤢</span></div>
+          <div class="cam-box chap" id="chapBox">
+            <canvas id="resultCanvas"></canvas>
+            <div id="placeholderChap" class="cam-placeholder"><div>⚡</div><p>En attente de cible + caméra</p><small>Je mange un garba avec mon avatar - comme sur ta capture</small></div>
+            <div class="cam-label">Avatar qui fait tes gestes</div>
+            <button class="telegram">✈️</button>
+          </div>
+          <div class="cam-controls"><span id="statusText">Prêt - Lance le swap</span></div>
+        </div>
+      </div>
+
+      <!-- Avatars row like screenshot -->
+      <div class="avatars-section">
+        <div class="card">
+          <div class="card-title">Avatar sélectionné</div>
+          <div class="selected-avatar"><img id="selAv" src=""><span>Phjg<br><small>Actif</small></span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Mes avatars</div>
+          <div class="my-avatars">
+            <div class="av"><img src="https://i.pravatar.cc/100?img=1"></div>
+            <div class="av"><img src="https://i.pravatar.cc/100?img=5"></div>
+            <div class="av"><img src="https://i.pravatar.cc/100?img=8"></div>
+            <div class="av"><img src="https://i.pravatar.cc/100?img=12"></div>
+            <div class="av"><img src="https://i.pravatar.cc/100?img=15"></div>
+            <div class="av add">+</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btnStart" class="btn-big">▶️ LANCER LIVE SWAP 5.0 - Comme sur ta capture</button>
+        <button id="btnStop" class="btn-big ghost" style="display:none">⏹️ Arrêter</button>
+      </div>
+      <div class="sliders">
+        <label>Zoom <input type="range" id="zoom" min="0.7" max="1.6" value="1.05" step="0.05"></label>
+        <label>Flou <input type="range" id="feather" min="0" max="25" value="12"></label>
+        <label>Lumière <input type="range" id="brightness" min="0.7" max="1.4" value="1"></label>
+      </div>
     </div>
-  </div>
+  </main>
 </div>
 <script src="app.js"></script>
 </body>
